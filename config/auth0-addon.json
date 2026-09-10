@@ -1,0 +1,19 @@
+{
+  "audience": "urn:storeops:local",
+  "recipient": "http://localhost:3000/auth/saml/acs",
+  "destination": "http://localhost:3000/auth/saml/acs",
+  "mappings": {
+    "user_id": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier",
+    "email": "email",
+    "name": "displayName"
+  },
+  "nameIdentifierFormat": "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent",
+  "nameIdentifierProbes": ["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"],
+  "signatureAlgorithm": "rsa-sha256",
+  "digestAlgorithm": "sha256",
+  "signResponse": false,
+  "lifetimeInSeconds": 300,
+  "createUpnClaim": false,
+  "passthroughClaimsWithNoMapping": false,
+  "mapIdentities": false
+}

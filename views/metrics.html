@@ -1,0 +1,14 @@
+<small>DATA SERVICES</small>
+<h1>Metrics Widget</h1>
+<p>This page asks the StoreOps GraphQL endpoint for read-only account metrics.</p>
+<section>
+    <div class="metric-grid">
+        <div class="metric"><small>Total users</small><strong id="totalUsers">—</strong></div>
+        <div class="metric"><small>Active users</small><strong id="activeUsers">—</strong></div>
+        <div class="metric"><small>Inactive users</small><strong id="inactiveUsers">—</strong></div>
+    </div>
+    <h2>Users by store</h2>
+    <ul id="storeList"><li>Loading…</li></ul>
+    <p class="notice" id="status">Sending GraphQL query…</p>
+</section>
+<script src="/public/metrics.js" defer></script>

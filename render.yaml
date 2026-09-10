@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: storeops-identity-lab
+    runtime: node
+    plan: free
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    startCommand: pnpm start
+    envVars:
+      - key: APP_BASE_URL
+        sync: false
+      - key: SP_ENTITY_ID
+        value: urn:storeops:local
+      - key: JIT_ENABLED
+        value: "true"
+      - key: IDP_SSO_URL
+        sync: false
+      - key: IDP_ISSUER
+        sync: false
+      - key: IDP_CERT_PEM
+        sync: false
+      - key: SCIM_TOKEN
+        sync: false

@@ -1,0 +1,6 @@
+node_modules/
+.env
+data/
+config/*.pem
+config/*.xml
+coverage/

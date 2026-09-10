@@ -1,0 +1,16 @@
+<small>BACKEND EXPLORER</small>
+<h1>Follow your login.</h1>
+<p>Keep this tab open while you sign in to StoreOps in another tab. This timeline updates every second.</p>
+<div class="flow-map" aria-label="Login participants">
+    <span>Browser</span><b>↔</b><span>StoreOps<br><small>Local backend</small></span><b>↔</b><span>Auth0<br><small>Identity provider</small></span>
+</div>
+<p class="notice">Auth0 authenticates the user and runs the Action on its own servers. This panel shows events observed by StoreOps. It does not expose Auth0’s internal logs.</p>
+<p id="activity-status" role="status">Connecting to the local server…</p>
+<ol id="timeline" class="timeline"></ol>
+<details>
+    <summary>View these events as server logs</summary>
+    <p>The same events are printed in the terminal running StoreOps. Times below are displayed in your local timezone.</p>
+    <pre id="raw-events">No events yet.</pre>
+</details>
+<p><a href="/" target="_blank" rel="noopener">Open StoreOps to sign in ↗</a></p>
+<script src="/public/activity.js" defer></script>

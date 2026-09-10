@@ -1,0 +1,16 @@
+{
+  "schemas": [
+    "urn:ietf:params:scim:schemas:core:2.0:User",
+    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+  ],
+  "externalId": "employee-ana-001",
+  "userName": "ana.storeops@example.com",
+  "displayName": "Ana Silva",
+  "active": true,
+  "emails": [
+    { "value": "ana.storeops@example.com", "type": "work", "primary": true }
+  ],
+  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+    "department": "101"
+  }
+}

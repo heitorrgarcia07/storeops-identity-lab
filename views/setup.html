@@ -1,0 +1,16 @@
+<h1>Connect Auth0</h1>
+<p>In your Auth0 dashboard, create a Regular Web Application and enable the SAML2 Web App addon.</p>
+<section>
+    <dl>
+        <dt>Application Callback URL / ACS</dt>
+        <dd><code>{{callbackUrl}}</code></dd>
+        <dt>Audience / SP Entity ID</dt>
+        <dd><code>{{entityId}}</code></dd>
+        <dt>Required attributes</dt>
+        <dd><code>email</code>, <code>displayName</code>, <code>storeId</code></dd>
+        <dt>Status</dt>
+        <dd>{{status}}</dd>
+    </dl>
+</section>
+<p>Follow the walkthrough in <code>docs/AUTH0-SETUP.md</code>. Restart the server after editing <code>.env</code>.</p>
+<a href="/">Back</a>
