@@ -19,9 +19,18 @@ async function loadMetrics() {
     document.querySelector('#totalUsers').textContent = metrics.totalUsers;
     document.querySelector('#activeUsers').textContent = metrics.activeUsers;
     document.querySelector('#inactiveUsers').textContent = metrics.inactiveUsers;
-    document.querySelector('#storeList').innerHTML = metrics.usersByStore
-        .map(store => `<li>Store ${store.storeId}: ${store.users} user(s)</li>`).join('') || '<li>No users yet</li>';
-    document.querySelector('#status').textContent = 'Loaded from SQLite through GraphQL.';
+    const stores = metrics.usersByStore.map(store => {
+        const item = document.createElement('li');
+        item.textContent = `Store ${store.storeId}: ${store.users} user(s)`;
+        return item;
+    });
+    if (!stores.length) {
+        const empty = document.createElement('li');
+        empty.textContent = 'No users yet';
+        stores.push(empty);
+    }
+    document.querySelector('#storeList').replaceChildren(...stores);
+    document.querySelector('#status').textContent = 'Loaded from the database through the metrics API.';
 }
 
 loadMetrics().catch(error => {

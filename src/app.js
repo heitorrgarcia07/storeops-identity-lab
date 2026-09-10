@@ -28,15 +28,15 @@ export function createApp(opts) {
     app.use(express.urlencoded({ extended: false, limit: '256kb' }));
     app.use(express.json({ limit: '64kb', type: ['application/json', 'application/graphql+json'] }));
     app.use('/scim/v2', createScimRouter({ users: opts.users, token: opts.scimToken, baseUrl: opts.baseUrl }));
-    app.post('/api/graphql', (req, res) => {
+    app.post('/api/graphql', async (req, res) => {
         const query = typeof req.body?.query === 'string' ? req.body.query : '';
         record(null, 'graphql.request.received', 'GraphQL request received', 'The Metrics Widget sent a read-only query to POST /api/graphql.');
         if (!query || !/\bmetrics\b/.test(query)) {
             record(null, 'graphql.request.rejected', 'GraphQL query rejected', 'This learning endpoint supports the metrics query only.', 'error');
             return res.status(400).json({ errors: [{ message: 'Only the metrics query is supported in this lab.' }] });
         }
-        const metrics = opts.users.metrics();
-        record(null, 'graphql.metrics.served', 'Metrics returned', 'The backend read aggregate account metrics from SQLite and returned them to the widget.');
+        const metrics = await opts.users.metrics();
+        record(null, 'graphql.metrics.served', 'Metrics returned', 'The backend read aggregate account metrics from the database and returned them to the widget.');
         res.json({ data: { metrics } });
     });
     app.get('/activity', (_req, res) => res.send(renderPage('activity', 'Login activity')));
@@ -118,7 +118,7 @@ export function createApp(opts) {
             next(err);
         }
     });
-    app.get('/auth/saml/finish', (req, res, next) => {
+    app.get('/auth/saml/finish', async (req, res, next) => {
         try {
             const state = typeof req.query.state === 'string' ? req.query.state : '';
             const flow = flows.get(state);
@@ -128,11 +128,11 @@ export function createApp(opts) {
             record(flow.trace, 'browser.verified', '6 · Browser verified', 'The browser finishing this login matches the browser that started it.');
             flows.delete(state);
             record(flow.trace, 'identity.checking', '7 · Checking account and attributes', 'StoreOps looks up the identity and checks email, displayName, storeId and local account status.');
-            const result = opts.users.login(flow.profile, opts.issuer, opts.jit);
+            const result = await opts.users.login(flow.profile, opts.issuer, opts.jit);
             if (result.managedBy === 'SCIM') {
                 record(flow.trace, 'account.scim.preserved', '8 · SCIM account recognized', 'The linked account was found. SAML authenticated the identity; the profile, store and active status managed by SCIM were preserved.');
             } else {
-                record(flow.trace, result.created ? 'jit.created' : 'account.updated', result.created ? '8 · Account created with JIT' : '8 · Existing account updated', result.created ? 'A new local account was saved in SQLite.' : 'The same local account was preserved. Its name, email and assigned store were refreshed from this login.');
+                record(flow.trace, result.created ? 'jit.created' : 'account.updated', result.created ? '8 · Account created with JIT' : '8 · Existing account updated', result.created ? 'A new account was saved in the database.' : 'The same account was preserved. Its name, email and assigned store were refreshed from this login.');
             }
             const sessionId = token();
             const old = cookie(req, 'storeops_session');
@@ -148,9 +148,9 @@ export function createApp(opts) {
             next(err);
         }
     });
-    app.get('/dashboard', (req, res) => {
+    app.get('/dashboard', async (req, res) => {
         const session = sessions.get(cookie(req, 'storeops_session') || '');
-        const user = session && opts.users.get(session.userId);
+        const user = session && await opts.users.get(session.userId);
         if (!user?.active || !session)
             return res.redirect('/');
         if (!session.dashboardRecorded) {
@@ -178,6 +178,10 @@ export function createApp(opts) {
     });
     app.use((err, _req, res, _next) => {
         const requestId = randomUUID();
+        if (!_req.path.startsWith('/auth/saml/')) {
+            record(null, 'request.failed', 'Request failed', 'A server or database request could not be completed.', 'error');
+            return res.status(err.type === 'entity.parse.failed' ? 400 : 503).json({ errors: [{ message: 'Request could not be completed.', reference: requestId }] });
+        }
         record(_req.loginTrace, 'login.rejected', 'Login stopped', err instanceof IdentityError ? err.message : 'SAML validation or request failure. Check the identity provider configuration.', 'error');
         // Never log raw assertions, credentials, or arbitrary library errors containing XML.
         console.error(JSON.stringify({ event: 'login.rejected', requestId, reason: err instanceof IdentityError ? err.message : 'SAML validation or request failure' }));

@@ -28,7 +28,7 @@ Open http://localhost:3000. Follow [the Portuguese Auth0 walkthrough](docs/AUTH0
 
 On this machine, `scripts/local.sh start` uses the bundled Node runtime without installing Node globally. `scripts/local.sh check` and `scripts/local.sh test` run verification.
 
-For a temporary public demo, `render.yaml` describes a free Render Web Service. Set the Auth0 values as environment variables in Render and update the Auth0 SAML ACS URL to the public `APP_BASE_URL`. Free Render storage is ephemeral, so the local SQLite data is suitable for demonstration only; do not treat it as persistent production storage.
+For a temporary public demo, `render.yaml` describes a free Render Web Service. Set the Auth0 values as environment variables in Render and update the Auth0 SAML ACS URL to the public `APP_BASE_URL`. Set `DATABASE_URL` to use the separate PostgreSQL service; see [PostgreSQL setup and verification](docs/POSTGRESQL.md). Without it, the application uses SQLite inside its own environment. SQLite files on the free Render web service are ephemeral; the SQLite file on your computer is separate.
 
 ## Scope
 
@@ -41,7 +41,7 @@ For a temporary public demo, `render.yaml` describes a free Render Web Service. 
 
 ## Limits
 
-Local HTTP only, loopback listener, one process, in-memory sessions and request cache. Restarting invalidates sessions and in-flight logins. SQLite accounts persist in `data/`.
+Local HTTP or hosted HTTPS, one process, in-memory sessions and request cache. Restarting invalidates sessions and in-flight logins. Local SQLite accounts persist in `data/`. Hosted PostgreSQL accounts persist independently of application restarts, subject to the database service's retention and expiry policy. Switching to PostgreSQL does not import existing SQLite accounts.
 
 SCIM creation and updates are described in [SCIM-FIRST-EXERCISE.md](docs/SCIM-FIRST-EXERCISE.md). Manual identity linking is available in [SCIM-SAML-LINKING.md](docs/SCIM-SAML-LINKING.md). The read-only Metrics Widget exercise is described in [GRAPHQL-METRICS.md](docs/GRAPHQL-METRICS.md). Linked SCIM accounts retain provisioning-managed profile, store and active status during SAML login. Automated IdP provisioning, general account migration, role administration, Single Logout and production deployment are not implemented. Auth0 access changes affect new logins, not existing local sessions. SCIM deactivation blocks protected requests while inactive, but reactivation can restore an unexpired session. Do not expose this lab through a public tunnel without adapting transport, cookies and deployment controls.
 
