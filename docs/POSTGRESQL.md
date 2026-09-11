@@ -59,4 +59,4 @@ ORDER BY user_name;
 
 `./scripts/local.sh test` includes SQLite/SAML regression tests and PostgreSQL SQL tests using PGlite, an embedded PostgreSQL engine. These exercise rollback, account linking, metrics, provisioning and data persistence after closing/reopening a test database. They do not verify Render networking, TLS or credentials; the acceptance checks above do that.
 
-The metrics endpoint remains a GraphQL-style teaching stub, not a full GraphQL implementation. Switching databases does not change that limitation.
+The metrics endpoint uses GraphQL.js and a read-only schema; see [GRAPHQL-METRICS.md](GRAPHQL-METRICS.md). The same resolver interface supports PostgreSQL and SQLite.

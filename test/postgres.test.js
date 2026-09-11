@@ -37,7 +37,7 @@ test('PostgreSQL: SCIM, JIT, identity link, deactivation, rollback and restart p
     const app = createApp({ users, adminToken, scimToken: token, issuer, jit: true, baseUrl: 'http://localhost:3000', entityId: 'urn:test:sp' });
     const post = body => request(app).post('/scim/v2/Users').set('Authorization', `Bearer ${token}`).send(body);
     const patch = (id, operations) => request(app).patch(`/scim/v2/Users/${id}`).set('Authorization', `Bearer ${token}`).send(envelope(operations));
-    const metrics = () => request(app).post('/api/graphql').send({ query: '{ metrics { totalUsers activeUsers } }' });
+    const metrics = () => request(app).post('/api/graphql').send({ query: '{ metrics { totalUsers activeUsers inactiveUsers usersByStore { storeId users } } }' });
     assert.equal((await metrics()).body.data.metrics.totalUsers, 0);
     await request(app).get('/scim/v2/Users').expect(401);
     const created = (await post(ana).expect(201)).body;

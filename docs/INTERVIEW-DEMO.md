@@ -7,9 +7,9 @@ StoreOps is a fictional retail operations application. A customer needs SSO for 
 ## Demonstration
 
 1. **SAML login and JIT** — The browser starts SAML with Auth0. StoreOps validates the signed response, checks issuer, audience, recipient, timing and request correlation, then creates or preserves a local account.
-2. **SCIM provisioning** — Postman represents an enterprise provisioning client. `POST /scim/v2/Users` creates an account before login; `PATCH` changes the store or active status. SQLite persists both the operational account and the SCIM representation.
+2. **SCIM provisioning** — Postman represents an enterprise provisioning client. `POST /scim/v2/Users` creates an account before login; `PATCH` changes the store or active status. PostgreSQL on Render (SQLite locally) persists both the operational account and the SCIM representation.
 3. **Identity linking** — An administrator explicitly links the Auth0 subject to the existing SCIM account. A later SAML login authenticates the person while SCIM remains the source of truth for profile, store and active status.
-4. **GraphQL metrics** — The Metrics Widget sends a read-only query to `POST /api/graphql`. StoreOps reads aggregate values from SQLite and returns them under `data`. Deactivating a user with SCIM and refreshing the widget makes the change visible.
+4. **GraphQL metrics** — The Metrics Widget sends a read-only query to `POST /api/graphql`. GraphQL.js validates the query against the schema, calls a resolver to read aggregate database values and returns only the requested fields under `data`. Demonstrate selection by requesting only `activeUsers`; then request an unknown field to see validation. Deactivating a user with SCIM and refreshing the widget makes the change visible.
 
 ## Interview explanation
 

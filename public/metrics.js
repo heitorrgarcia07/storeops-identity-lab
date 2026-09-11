@@ -15,6 +15,7 @@ async function loadMetrics() {
     });
     if (!response.ok) throw new Error(`GraphQL request failed (${response.status})`);
     const body = await response.json();
+    if (body.errors?.length || !body.data?.metrics) throw new Error('Metrics are unavailable. Please try again.');
     const metrics = body.data.metrics;
     document.querySelector('#totalUsers').textContent = metrics.totalUsers;
     document.querySelector('#activeUsers').textContent = metrics.activeUsers;

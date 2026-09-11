@@ -6,6 +6,7 @@ import { renderPage } from './pages.js';
 import { createTrace, record } from './activity.js';
 import { createScimRouter } from './scim.js';
 import { createAdminRouter } from './admin.js';
+import { metricsHandler } from './metrics-graphql.js';
 const token = () => randomBytes(32).toString('hex');
 const cookie = (req, key) => req.headers.cookie?.split(';').map(s => s.trim()).find(s => s.startsWith(`${key}=`))?.slice(key.length + 1);
 export function createApp(opts) {
@@ -30,17 +31,7 @@ export function createApp(opts) {
     app.use(express.urlencoded({ extended: false, limit: '256kb' }));
     app.use(express.json({ limit: '64kb', type: ['application/json', 'application/graphql+json'] }));
     app.use('/scim/v2', createScimRouter({ users: opts.users, token: opts.scimToken, baseUrl: opts.baseUrl }));
-    app.post('/api/graphql', async (req, res) => {
-        const query = typeof req.body?.query === 'string' ? req.body.query : '';
-        record(null, 'graphql.request.received', 'GraphQL request received', 'The Metrics Widget sent a read-only query to POST /api/graphql.');
-        if (!query || !/\bmetrics\b/.test(query)) {
-            record(null, 'graphql.request.rejected', 'GraphQL query rejected', 'This learning endpoint supports the metrics query only.', 'error');
-            return res.status(400).json({ errors: [{ message: 'Only the metrics query is supported in this lab.' }] });
-        }
-        const metrics = await opts.users.metrics();
-        record(null, 'graphql.metrics.served', 'Metrics returned', 'The backend read aggregate account metrics from the database and returned them to the widget.');
-        res.json({ data: { metrics } });
-    });
+    app.post('/api/graphql', metricsHandler(opts.users));
     app.get('/activity', (_req, res) => res.send(renderPage('activity', 'Login activity')));
     app.get('/activity/data', (req, res) => {
         const trace = traces.get(cookie(req, 'storeops_activity'));
