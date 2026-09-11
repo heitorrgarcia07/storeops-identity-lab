@@ -5,7 +5,7 @@ const button = document.querySelector('#save-sale');
 const status = document.querySelector('#sale-status');
 const summary = document.querySelector('#sales-summary');
 const rows = document.querySelector('#sales-rows');
-const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BRL' });
+const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const today = new Date();
 date.value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 let pending;
@@ -18,13 +18,13 @@ async function loadSales() {
     let cents = 0;
     for (const sale of data.sales) {
         const row = document.createElement('tr');
-        for (const value of [sale.sale_date, sale.sale_id, money.format(Number(sale.amount_brl))]) {
+        for (const value of [sale.sale_date, sale.sale_id, money.format(Number(sale.amount_usd))]) {
             const cell = document.createElement('td');
             cell.textContent = value;
             row.append(cell);
         }
         rows.append(row);
-        cents += Math.round(Number(sale.amount_brl) * 100);
+        cents += Math.round(Number(sale.amount_usd) * 100);
     }
     summary.textContent = data.sales.length ? `${data.sales.length} sales shown · Total shown: ${money.format(cents / 100)}` : 'No sales yet. Record your first fictional sale above.';
 }
@@ -32,7 +32,7 @@ async function loadSales() {
 form.addEventListener('submit', async event => {
     event.preventDefault();
     // Preserve the same ID and payload when a network response is uncertain.
-    pending ??= { sale_id: crypto.randomUUID(), sale_date: date.value, amount_brl: amount.value };
+    pending ??= { sale_id: crypto.randomUUID(), sale_date: date.value, amount_usd: amount.value };
     date.disabled = amount.disabled = button.disabled = true;
     status.textContent = 'Saving sale…';
     try {

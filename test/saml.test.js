@@ -42,7 +42,7 @@ test('linked SCIM identity signs in without overwriting provisioning data and is
     await request(app).get(scriptPath).expect(200).expect('Content-Type', /javascript/);
     const csrf = salesPage.text.match(/id="csrf" value="([^"]+)"/)[1];
     await request(app).post('/api/sales').set('Cookie', session).set('X-CSRF-Token', csrf)
-        .send({ sale_id: randomUUID(), sale_date: '2026-09-11', amount_brl: '50.00' }).expect(201);
+        .send({ sale_id: randomUUID(), sale_date: '2026-09-11', amount_usd: '50.00' }).expect(201);
     assert.equal((await request(app).get('/api/sales').set('Cookie', session)).body.sales.length, 1);
     assert.equal(users.get(id).email, payload.emails[0].value);
     assert.equal(users.db.prepare('SELECT count(*) AS n FROM users').get().n, 1);

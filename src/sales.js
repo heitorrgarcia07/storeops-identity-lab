@@ -26,18 +26,18 @@ export function createSalesRouter({ sales, getAccess }) {
         const { user, session } = req.salesAccess;
         if (req.get('x-csrf-token') !== session.csrf) return res.status(403).json({ error: 'Invalid form token. Reload the page.' });
         const body = req.body || {};
-        const { sale_id, sale_date, amount_brl } = body;
-        if (Object.keys(body).some(key => !['sale_id', 'sale_date', 'amount_brl'].includes(key)) ||
+        const { sale_id, sale_date, amount_usd } = body;
+        if (Object.keys(body).some(key => !['sale_id', 'sale_date', 'amount_usd'].includes(key)) ||
             typeof sale_id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sale_id) ||
             typeof sale_date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(sale_date) ||
             !Number.isFinite(Date.parse(sale_date)) || new Date(sale_date).toISOString().slice(0,10) !== sale_date ||
-            typeof amount_brl !== 'string' || !/^\d{1,7}(\.\d{1,2})?$/.test(amount_brl)) {
+            typeof amount_usd !== 'string' || !/^\d{1,7}(\.\d{1,2})?$/.test(amount_usd)) {
             return res.status(400).json({ error: 'Provide a valid sale ID, date and positive amount with at most two decimals.' });
         }
-        const [whole, fraction = ''] = amount_brl.split('.');
+        const [whole, fraction = ''] = amount_usd.split('.');
         const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
-        if (cents < 1 || cents > 999999999) return res.status(400).json({ error: 'Amount must be between 0.01 and 9999999.99 BRL.' });
-        const saved = await sales.create({ sale_id, sale_date, amount_brl: (cents / 100).toFixed(2),
+        if (cents < 1 || cents > 999999999) return res.status(400).json({ error: 'Amount must be between 0.01 and 9999999.99 USD.' });
+        const saved = await sales.create({ sale_id, sale_date, amount_usd: (cents / 100).toFixed(2),
             amount_cents: cents, store_id: user.store_id, created_by: user.id });
         record(null, saved.created ? 'sale.created' : 'sale.repeated', 'Sale recorded', 'A sale was saved or recognized as an identical retry for the assigned store.');
         res.status(saved.created ? 201 : 200).json(saved.sale);

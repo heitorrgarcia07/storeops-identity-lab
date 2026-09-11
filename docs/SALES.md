@@ -19,17 +19,19 @@ Example creation body:
 {
   "sale_id": "f21fa188-3970-40ac-91a1-9570c61c56eb",
   "sale_date": "2026-09-11",
-  "amount_brl": "50.00"
+  "amount_usd": "50.00"
 }
 ```
 
-The browser generates a UUID for each sale. Amounts are positive decimal strings with at most two decimal places, up to `9999999.99` BRL. The server supplies `store_id` and records the creator internally. PostgreSQL uses `DATE` and `NUMERIC`; SQLite stores the amount as integer cents.
+The browser generates a UUID for each sale. Amounts are positive decimal strings with at most two decimal places, up to `9999999.99` USD. The server supplies `store_id` and records the creator internally. PostgreSQL uses `DATE` and `NUMERIC`; SQLite stores the amount as integer cents.
 
 New sales return **201**; identical retries by the same account return **200** without another insertion. Reusing an ID with different data or another account returns **409**. Invalid input returns **400**, missing/inactive sessions **401**, invalid CSRF tokens **403**. The form retains an uncertain request for safe retry while the page remains open.
 
 Every request checks current account activity and store assignment. SCIM deactivation blocks further sales access; reassignment changes which store the account can access. Historical sales remain assigned to their original store.
 
 ## Scope
+
+All fictional sales use USD. On startup, PostgreSQL automatically renames the legacy `amount_brl` column to `amount_usd`, preserving sale IDs and numeric values. This relabels demo data; it does not convert exchange rates. API callers must now send `amount_usd`. SQLite retains its currency-neutral integer cents column.
 
 Sales are immutable in this version: no edits, refunds or deletion. The page total covers only the displayed rows. GraphQL metrics still describe accounts, not sales. BigQuery synchronization is not implemented; CSV exercises remain separate from application data.
 

@@ -92,11 +92,16 @@ test('PostgreSQL: SCIM, JIT, identity link, deactivation, rollback and restart p
     counts = (await metrics()).body.data.metrics;
     assert.deepEqual(counts.usersByStore, [{ storeId: '102', users: 2 }]);
 
-    const sale = { sale_id: 'f21fa188-3970-40ac-91a1-9570c61c56eb', sale_date: '2026-09-11', store_id: '102', amount_brl: '50.00', created_by: created.id };
+    const sale = { sale_id: 'f21fa188-3970-40ac-91a1-9570c61c56eb', sale_date: '2026-09-11', store_id: '102', amount_usd: '50.00', created_by: created.id };
     assert.equal((await users.sales.create(sale)).created, true);
+    // Simulate the previous deployed schema, then run startup migration twice.
+    await users.pool.query('ALTER TABLE sales RENAME COLUMN amount_usd TO amount_brl');
+    await users.initialize();
+    await users.initialize();
+    assert.equal((await users.sales.list('102'))[0].amount_usd, '50.00');
     await users.close();
     users = await database(path);
-    assert.equal((await users.sales.list('102'))[0].amount_brl, '50.00');
+    assert.equal((await users.sales.list('102'))[0].amount_usd, '50.00');
     assert.equal((await users.sales.create(sale)).created, false);
     assert.equal((await users.get(created.id)).subject, 'auth0|scim');
     assert.equal((await users.metrics()).totalUsers, 2);

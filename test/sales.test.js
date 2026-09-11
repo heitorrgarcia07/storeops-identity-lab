@@ -29,19 +29,19 @@ for (const backend of ['SQLite', 'PostgreSQL']) test(`${backend}: sales validati
     // Test-only session fixture. The production app uses its SAML session map.
     app.use(createSalesRouter({ sales:users.sales, getAccess:async () => current ? { session:{csrf:'test'}, user:await users.get(current) } : {} }));
     const post = body => request(app).post('/api/sales').set('x-csrf-token','test').send(body);
-    const sale = { sale_id:randomUUID(), sale_date:'2026-09-11', amount_brl:'0.10' };
+    const sale = { sale_id:randomUUID(), sale_date:'2026-09-11', amount_usd:'0.10' };
     await request(app).get('/sales').expect(200);
     await request(app).post('/api/sales').send(sale).expect(403);
-    for (const invalid of [{store_id:'102'}, {sale_date:'2026-02-30'}, {amount_brl:'0'}, {amount_brl:'1.001'}, {amount_brl:10}, {sale_id:'invalid'}]) {
+    for (const invalid of [{store_id:'102'}, {sale_date:'2026-02-30'}, {amount_usd:'0'}, {amount_usd:'1.001'}, {amount_usd:10}, {sale_id:'invalid'}]) {
         await post({...sale,...invalid}).expect(400);
     }
     assert.equal((await request(app).get('/api/sales')).body.sales.length,0);
     const saved = (await post(sale).expect(201)).body;
-    assert.equal(saved.amount_brl,'0.10');
+    assert.equal(saved.amount_usd,'0.10');
     assert.equal(saved.store_id,'101');
     assert.equal(saved.created_by,undefined);
     assert.deepEqual((await post(sale).expect(200)).body,saved);
-    await post({...sale,amount_brl:'0.20'}).expect(409);
+    await post({...sale,amount_usd:'0.20'}).expect(409);
     await request(app).get('/api/sales?store_id=102').expect(400);
     current = b.id;
     assert.equal((await request(app).get('/api/sales')).body.sales.length,0);
