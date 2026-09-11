@@ -1,68 +1,146 @@
-# StoreOps Identity Lab
+# StoreOps Identity & Integration Lab
 
-## Watch a login
+A hands-on technical implementation case study for a fictional retail customer: provision a store employee, connect their identity, enable SSO, revoke access, and verify the outcome through API responses, logs, and a metrics widget.
 
-Open `/activity` in a second tab in the same browser, then start a fresh login from `/`.
-The timeline polls once per second and shows backend events for that browser's latest login.
-Expand “View these events as server logs” to read the structured events. The running terminal
-also prints them. Auth0 authentication and Action execution are external steps, not internal
-events observed by StoreOps. Timelines are in memory, expire after one hour, and reset on restart.
-No passwords, raw assertions, email addresses, session cookies or SAML request tokens are recorded
-in these new timeline events. Prior logins cannot be reconstructed.
+Built as an interview demonstration for a customer-facing integrations role. This is an independent learning project, not an official Zipline product or integration.
 
-Module 01: a local SAML service provider with Auth0 as identity provider and just-in-time account provisioning. Built for a retail technical implementation case study. This is an independent lab, not a Zipline integration.
+**[Open the hosted demo](https://storeops-identity-lab.onrender.com/)** · **[Metrics Widget](https://storeops-identity-lab.onrender.com/metrics)** · **[Demo walkthrough](docs/INTERVIEW-DEMO.md)**
 
-## Run
+The presenter provides a test account for the guided session. Creating an Auth0 account alone does not grant StoreOps access.
 
-Requires Node.js 24+, pnpm, and OpenSSL for tests.
+## Customer scenario
+
+A retail organization needs employees assigned to the correct store, a central sign-in experience, and a reliable way to remove access when an employee leaves.
+
+The implementation separates three responsibilities:
+
+| Responsibility | Implementation |
+| --- | --- |
+| Authentication: who is signing in? | Auth0 sends a signed SAML response; StoreOps validates it. |
+| Provisioning: which account, store and access status should exist? | A SCIM API creates and updates accounts. Postman simulates the customer's provisioning client. |
+| Reporting: what is the current account state? | A GraphQL API reads aggregate database metrics for a browser widget. |
+
+Two onboarding paths are supported: JIT creates an account on its first authorized SAML login; SCIM creates an account before login, followed by an explicit administrative link to its Auth0 identity.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    B[Browser] -->|Sign-in| A[Auth0]
+    A -->|SAML response via browser| S[StoreOps / Node.js + Express]
+    P[Postman] -->|SCIM provisioning| S
+    P -->|Administrative identity link| S
+    W[Metrics Widget] -->|GraphQL query| S
+    S --> D[(PostgreSQL on Render)]
+```
+
+The frontend uses HTML, CSS and browser JavaScript. The backend uses Express, Node-SAML, GraphQL.js and the PostgreSQL driver. Local development can use SQLite; the hosted application uses a separate PostgreSQL service selected through `DATABASE_URL`.
+
+## Guided demonstration · 5–7 minutes
+
+| Step | Action | Evidence |
+| --- | --- | --- |
+| 1. Provision | Create a fictional user with `POST /scim/v2/Users`. | HTTP 201 and a new account ID, before any login. |
+| 2. Prepare identity | Create the corresponding Auth0 user and set authorized `app_metadata`. | Auth0 User ID and store assignment, configured by the presenter. |
+| 3. Link | Send the SCIM account ID and Auth0 User ID to `POST /api/admin/identity-links`. | HTTP 200; the existing account ID is preserved. |
+| 4. Authenticate | Sign in through Auth0 in a private browser window. | Dashboard shows **SCIM account preserved — SAML sign-in**. |
+| 5. Revoke | PATCH the SCIM account to `active: false`, then refresh the dashboard. | Access is blocked; the Metrics Widget reflects the inactive account. |
+| 6. Restore | PATCH `active: true` and verify access again. | The same account becomes usable again. |
+| 7. Query | Request only `activeUsers`, then request an unknown field. | GraphQL selects the requested field and rejects the invalid query. |
+
+Open [Login Activity](https://storeops-identity-lab.onrender.com/activity) in a second tab of the **same browser session** before signing in. It shows the backend login stages. SCIM and administrative API events appear in server logs.
+
+## API examples
+
+Postman environments keep local and hosted values separate. Set `baseUrl`, `scimToken`, `adminToken`, `userId` and `auth0UserId` for the selected environment.
+
+### Link an existing SCIM account
+
+```http
+POST {{baseUrl}}/api/admin/identity-links
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+```
+
+```json
+{
+  "userId": "{{userId}}",
+  "subject": "{{auth0UserId}}"
+}
+```
+
+This custom administrative operation is separate from SCIM. It requires a distinct admin credential and uses the server's trusted issuer. Repeating an identical link succeeds; conflicting links and silent account merges are refused. The administrator confirms that both IDs belong to the intended person.
+
+### Select metrics with GraphQL
+
+```http
+POST {{baseUrl}}/api/graphql
+Content-Type: application/json
+```
+
+```json
+{
+  "query": "{ metrics { activeUsers usersByStore { storeId users } } }"
+}
+```
+
+Available fields: `totalUsers`, `activeUsers`, `inactiveUsers`, and `usersByStore { storeId users }`. The schema controls allowed queries; the resolver reads the database. Field selection controls the response, not which aggregate SQL calculations run.
+
+## Implementation decisions
+
+- **Stable identity:** accounts are identified by issuer and subject, not automatically matched by email.
+- **Clear ownership:** SAML authenticates a linked SCIM account without overwriting its profile, store or active status.
+- **Atomic provisioning:** account and SCIM representation changes commit together or roll back together.
+- **Access checks:** inactive accounts are rejected at login and when accessing the protected dashboard.
+- **Protocol validation:** signed SAML assertions are checked for issuer, audience, timing, recipient and request correlation; completion is browser-bound and single-use.
+- **Observability:** structured events explain success and failure without logging passwords, tokens, cookies or raw assertions.
+- **Separate persistence:** restarting the application clears sessions, while PostgreSQL retains accounts independently of the web service.
+
+## Run locally
+
+Requires Node.js 24+, pnpm, and OpenSSL for signed SAML tests.
 
 ```sh
-pnpm install
-pnpm setup
+pnpm install --frozen-lockfile
+node scripts/setup.mjs
 pnpm check
 pnpm test
 pnpm start
 ```
 
-Open http://localhost:3000. Follow [the Portuguese Auth0 walkthrough](docs/AUTH0-SETUP.md).
+Open [localhost:3000](http://localhost:3000). Setup creates `.env` from `.env.example` if needed. Configure Auth0 before testing SSO. Leave `DATABASE_URL` empty to use local SQLite.
 
-On this machine, `scripts/local.sh start` uses the bundled Node runtime without installing Node globally. `scripts/local.sh check` and `scripts/local.sh test` run verification.
+For the hosted demo, `render.yaml` describes the web service. Configure environment variables in Render; the Auth0 callback must match the public application URL. See [PostgreSQL setup](docs/POSTGRESQL.md). Neither credentials nor database contents belong in the repository.
 
-For a temporary public demo, `render.yaml` describes a free Render Web Service. Set the Auth0 values as environment variables in Render and update the Auth0 SAML ACS URL to the public `APP_BASE_URL`. Set `DATABASE_URL` to use the separate PostgreSQL service; see [PostgreSQL setup and verification](docs/POSTGRESQL.md). Without it, the application uses SQLite inside its own environment. SQLite files on the free Render web service are ephemeral; the SQLite file on your computer is separate.
+## Verification and scope
 
-## Scope
+Automated tests cover signed SAML success and rejection paths, JIT behavior, SCIM provisioning and rollback, administrative authorization and linking, and GraphQL selection and validation. PostgreSQL SQL tests use the embedded PGlite engine; they do not verify Render connectivity or Auth0 configuration.
 
-- SP-initiated SAML login; signed assertions verified by `@node-saml/node-saml`.
-- Audience, issuer, validity, recipient and request correlation checks; browser-bound completion; one-time login requests.
-- JIT creates accounts by `(issuer, NameID)`; repeat login preserves internal ID. Inactive accounts are not reactivated.
-- The signed `storeId` determines store visibility. No user-selected store parameter.
-- HTTP-only session cookie, one-hour local session, CSRF-protected local logout.
-- Safe error references; no assertions, passwords or session tokens logged.
+The guided hosted flow has also been manually exercised: SCIM creation, administrative linking, SAML sign-in, deactivation/reactivation, and GraphQL queries. Before presenting, confirm the test account is active and GET the same account after a redeploy to check persistence.
 
-## Limits
+This is a focused demonstration, not a production-ready identity platform:
 
-Local HTTP or hosted HTTPS, one process, in-memory sessions and request cache. Restarting invalidates sessions and in-flight logins. Local SQLite accounts persist in `data/`. Hosted PostgreSQL accounts persist independently of application restarts, subject to the database service's retention and expiry policy. Switching to PostgreSQL does not import existing SQLite accounts.
+- Postman simulates provisioning; automatic IdP-to-SCIM synchronization is not implemented.
+- Auth0 account creation and access metadata are manual.
+- SCIM supports a subset: create, read, limited filtering/pagination, and PATCH replace of active status or store.
+- Sessions, login traces and request state are in memory in one process. Logout ends the StoreOps session, not the Auth0 session. Reactivation can restore an unexpired local session.
+- Metrics expose aggregate lab counts publicly. They are not scoped to the signed-in user's store.
+- GraphQL is read-only; there are no mutations or subscriptions.
+- Free hosting has availability and retention limits. Export demo data before the database's scheduled expiry.
 
-SCIM creation and updates are described in [SCIM-FIRST-EXERCISE.md](docs/SCIM-FIRST-EXERCISE.md). Manual identity linking is available in [SCIM-SAML-LINKING.md](docs/SCIM-SAML-LINKING.md). The read-only Metrics Widget exercise is described in [GRAPHQL-METRICS.md](docs/GRAPHQL-METRICS.md). Linked SCIM accounts retain provisioning-managed profile, store and active status during SAML login. Automated IdP provisioning, general account migration, role administration, Single Logout and production deployment are not implemented. Auth0 access changes affect new logins, not existing local sessions. SCIM deactivation blocks protected requests while inactive, but reactivation can restore an unexpired session. Do not expose this lab through a public tunnel without adapting transport, cookies and deployment controls.
+## Code map and walkthroughs
 
-Automated tests use locally generated signed SAML fixtures. They do not prove that an Auth0 tenant is correctly configured; manual acceptance remains pending until an actual login succeeds.
+| File | Purpose |
+| --- | --- |
+| [src/server.js](src/server.js) | Select storage and start the server. |
+| [src/config.js](src/config.js) | Configure SAML trust and callback values. |
+| [src/app.js](src/app.js) | Handle login, sessions, dashboard and route registration. |
+| [src/scim.js](src/scim.js) | Validate provisioning requests. |
+| [src/admin.js](src/admin.js) | Authorize and process identity links. |
+| [src/postgres.js](src/postgres.js) | PostgreSQL storage and transactions. |
+| [src/identity.js](src/identity.js) / [src/sqlite-scim.js](src/sqlite-scim.js) | Local SQLite account and provisioning storage. |
+| [src/metrics-graphql.js](src/metrics-graphql.js) | Define the GraphQL schema and resolver. |
+| [public/metrics.js](public/metrics.js) / [views/metrics.html](views/metrics.html) | Fetch metrics and display the widget. |
+| [test/](test/) | Automated behavioral checks. |
 
-## Files to study
-
-The custom administrative identity-link API is documented in [ADMIN-LINK-API.md](docs/ADMIN-LINK-API.md). It requires a separate `ADMIN_TOKEN` and preserves the same conflict checks as manual linking. The metrics endpoint uses GraphQL.js with a read-only schema, field selection and query validation; see [GRAPHQL-METRICS.md](docs/GRAPHQL-METRICS.md).
-
-- `src/config.js`: SAML trust configuration.
-- `views/`: HTML pages. `public/style.css`: colors and layout.
-- `src/pages.js`: fills HTML placeholders safely.
-- `src/app.js`: login request, assertion callback, browser binding, session and dashboard.
-- `src/identity.js`: JIT and identity persistence.
-- `config/auth0-addon.json`: Auth0 protocol settings.
-- `config/auth0-post-login-action.js`: application access and attribute mapping.
-- `docs/AUTH0-SETUP.md`: guided setup and acceptance checks.
-
-## References
-
-- https://github.com/node-saml/node-saml
-- https://auth0.com/docs/authenticate/single-sign-on/outbound-single-sign-on/configure-auth0-saml-identity-provider
-
-The application now runs as plain JavaScript: no TypeScript compiler or tsx runtime. HTML templates and CSS are separate files.
+Further walkthroughs: [SCIM](docs/SCIM-FIRST-EXERCISE.md), [administrative linking](docs/ADMIN-LINK-API.md), [GraphQL](docs/GRAPHQL-METRICS.md), and [Auth0 configuration (Portuguese)](docs/AUTH0-SETUP.md).
