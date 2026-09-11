@@ -48,4 +48,4 @@ The local SQLite script is a development utility; it is not a remote database ad
 
 Deactivation does not erase a previously rendered browser page. It is enforced on subsequent protected requests. Reactivation may restore an unexpired session; permanent session revocation/versioning is not implemented.
 
-See [SSO configuration](AUTH0-SETUP.md) and [demonstration acceptance](INTERVIEW-DEMO.md).
+See [SSO configuration](AUTH0-SETUP.md) and [solution overview](SOLUTION-OVERVIEW.md).

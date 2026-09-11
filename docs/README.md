@@ -1,26 +1,34 @@
-# DemoMart implementation documentation
+# DemoMart documentation
 
-Technical documentation for the DemoMart retail identity and data integration case study. The guides describe the implemented contracts, configuration responsibilities and acceptance criteria for a guided solution review.
+Configuration guides and API references for the DemoMart Team Portal.
 
-## Solution review
+## Start here
 
-Start with [Solution demonstration and acceptance](INTERVIEW-DEMO.md) for the business scenario, end-to-end workflow and expected evidence.
+[Solution overview](SOLUTION-OVERVIEW.md) explains the account lifecycle, system responsibilities and supported scope.
 
-## Integration references
+## Guides and references
 
-| Guide | Audience and purpose |
+| Document | Contents |
 | --- | --- |
-| [SAML SSO configuration](AUTH0-SETUP.md) | Identity and application administrators configuring Auth0 trust and assignment |
-| [SCIM provisioning API](SCIM-FIRST-EXERCISE.md) | Integration teams creating and maintaining accounts |
-| [Identity lifecycle and linking](SCIM-SAML-LINKING.md) | Reviewers assessing identity ownership and access behavior |
-| [Administrative identity-link API](ADMIN-LINK-API.md) | Authorized operators associating provisioned accounts with Auth0 identities |
-| [GraphQL metrics API](GRAPHQL-METRICS.md) | Clients consuming account metrics and handling query errors |
-| [Data architecture and deployment](POSTGRESQL.md) | Operators reviewing storage, configuration and persistence |
+| [SAML SSO](AUTH0-SETUP.md) | Auth0 trust configuration, assignment and attribute mapping |
+| [SCIM provisioning](SCIM-FIRST-EXERCISE.md) | Account creation, listing, updates and response codes |
+| [Identity lifecycle](SCIM-SAML-LINKING.md) | Account ownership, linking rules and access behavior |
+| [Administrative API](ADMIN-LINK-API.md) | Identity-link request, authentication and conflict handling |
+| [GraphQL metrics](GRAPHQL-METRICS.md) | Schema, queries, field selection and errors |
+| [Data and deployment](POSTGRESQL.md) | Storage model, environment configuration and persistence |
 
-## Conventions
+## Request conventions
 
-Examples use fictional identities and environment placeholders. `{{baseUrl}}` selects the application environment; `{{userId}}` is the SCIM account ID; `{{auth0UserId}}` is the corresponding Auth0 user ID. `{{scimToken}}` and `{{adminToken}}` are distinct credentials supplied by an authorized operator.
+Examples use fictional records and environment placeholders:
 
-The project is an independent demonstration. Each reference states its supported behavior and limitations; it should not be interpreted as a production service commitment or a complete implementation of every referenced protocol.
+| Placeholder | Value |
+| --- | --- |
+| `{{baseUrl}}` | Application URL |
+| `{{userId}}` | Account ID returned by SCIM |
+| `{{auth0UserId}}` | Corresponding Auth0 user ID |
+| `{{scimToken}}` | Provisioning credential |
+| `{{adminToken}}` | Separate administrative credential |
 
-[Project overview](../README.md)
+These references describe the implemented application, including its limitations. They do not imply full support for every feature of SAML or SCIM.
+
+[Back to project](../README.md)
