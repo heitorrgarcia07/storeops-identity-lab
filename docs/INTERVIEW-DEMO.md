@@ -1,24 +1,49 @@
-# Interview demo flow
+# Solution demonstration and acceptance
 
-## Scenario
+[Documentation index](README.md)
 
-StoreOps is a fictional retail operations application. A customer needs SSO for store employees, automated account lifecycle management, and a metrics widget.
+## Business scenario
 
-## Demonstration
+A fictional retail organization requires consistent employee onboarding, single sign-on, store assignment and access removal. StoreOps demonstrates how these requirements connect across identity, provisioning and reporting services.
 
-1. **SAML login and JIT** — The browser starts SAML with Auth0. StoreOps validates the signed response, checks issuer, audience, recipient, timing and request correlation, then creates or preserves a local account.
-2. **SCIM provisioning** — Postman represents an enterprise provisioning client. `POST /scim/v2/Users` creates an account before login; `PATCH` changes the store or active status. PostgreSQL on Render (SQLite locally) persists both the operational account and the SCIM representation.
-3. **Identity linking** — An administrator explicitly links the Auth0 subject to the existing SCIM account. A later SAML login authenticates the person while SCIM remains the source of truth for profile, store and active status.
-4. **GraphQL metrics** — The Metrics Widget sends a read-only query to `POST /api/graphql`. GraphQL.js validates the query against the schema, calls a resolver to read aggregate database values and returns only the requested fields under `data`. Demonstrate selection by requesting only `activeUsers`; then request an unknown field to see validation. Deactivating a user with SCIM and refreshing the widget makes the change visible.
+The implementation uses Auth0 for SAML authentication, SCIM endpoints for account lifecycle management, an administrative identity-link API, and GraphQL for aggregate account metrics.
 
-## Interview explanation
+## Demonstration prerequisites
 
-> “I separated authentication, provisioning and data consumption. SAML proves who the user is, SCIM manages the account lifecycle, and the local database stores the operational state. A small GraphQL contract then exposes aggregate metrics to a widget. I also made the failure paths observable through safe, structured events without logging assertions, cookies or credentials.”
+The implementation owner prepares a fictional account, authorized Auth0 application access and a provisioning client. Administrative panels and credentials remain with the owner; a reviewer can use the assigned test login.
 
-## Design decisions to mention
+Postman represents an enterprise provisioning client. The demo does not claim automatic synchronization from an IdP. Hosted data is stored in PostgreSQL independently of the web process.
 
-- SCIM-managed accounts are not overwritten by later SAML logins.
-- Account IDs remain stable when email or display names change.
-- Deactivation blocks access even when JIT is enabled.
-- Identity linking is explicit and refuses conflicts or silent merges.
-- The GraphQL endpoint is intentionally read-only and teaching-sized.
+## Demonstration sequence
+
+| Stage | Action | Observable outcome |
+| --- | --- | --- |
+| Provision | POST a new SCIM account | HTTP 201 with a stable account ID |
+| Associate | Link the Auth0 subject through the administrative API | HTTP 200; no duplicate account |
+| Authenticate | Sign in through Auth0 in a fresh browser session | SCIM-preserved dashboard result and matching ID |
+| Revoke | PATCH active=false and refresh the dashboard | Access blocked; inactive count increases |
+| Restore | PATCH active=true | Access restored; counts reflect the current state |
+| Select data | Request only activeUsers through GraphQL | Only the selected field is returned |
+| Validate contract | Request an undefined GraphQL field | Validation error before a database read |
+
+This sequence is designed for a 5–7 minute walkthrough. Creating the Auth0 identity and assigning metadata are administrator-managed steps.
+
+## Supporting evidence
+
+- The login timeline at `/activity` shows validation and account recognition in the same browser context as sign-in.
+- Server logs show provisioning, linking and GraphQL outcomes.
+- API responses expose account IDs, status codes and selected metrics.
+- A read-only database query can confirm persistence and identity mapping.
+- A redeploy followed by GET of the same account verifies storage independence. Browser sessions reset on restart.
+
+## Acceptance criteria
+
+The same provisioned account remains associated with its identity throughout the lifecycle. Deactivation prevents protected access, reactivation preserves the account, and reporting reflects current state.
+
+Automated tests cover protocol rejection paths, linking conflicts, transactional rollback and GraphQL validation. Hosted acceptance also depends on correct Auth0 configuration and database connectivity.
+
+## Scope boundaries
+
+This is an independent implementation case study, not a production identity platform or an official Zipline integration. Automated IdP provisioning, general account migration, groups, Single Logout and permanent session revocation are outside the implemented scope. Metrics are public aggregate demonstration data, not a store-authorized reporting service.
+
+[SSO configuration](AUTH0-SETUP.md) · [SCIM API](SCIM-FIRST-EXERCISE.md) · [Linking API](ADMIN-LINK-API.md) · [Metrics API](GRAPHQL-METRICS.md)

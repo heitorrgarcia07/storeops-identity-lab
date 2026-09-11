@@ -1,42 +1,54 @@
-# PostgreSQL on Render
+# Data architecture and deployment
 
-## Two independent environments
+[Documentation index](README.md)
 
-- Local application (`localhost:3000`): without `DATABASE_URL`, uses `data/storeops.sqlite` on your computer.
-- Hosted application: with `DATABASE_URL`, uses the separate PostgreSQL service. It does not read your computer's SQLite file.
+StoreOps supports PostgreSQL for the hosted demonstration and SQLite for local development. The application chooses its storage backend at startup.
 
-Set `DATABASE_URL` in the Render **web service**, using the database's **Internal Database URL**. Both services must be in the same region. Never commit the connection URL: it includes a password.
+## Environment model
 
-After deploying the updated code, look for this startup log:
+| Environment | Configuration | Storage |
+| --- | --- | --- |
+| Hosted | DATABASE_URL configured | Separate PostgreSQL service |
+| Local development | DATABASE_URL absent | data/storeops.sqlite within the local project |
+
+The two environments do not synchronize data. Selecting PostgreSQL does not import existing SQLite accounts. A failed PostgreSQL connection stops startup rather than silently switching storage.
+
+## Hosted configuration
+
+Set `DATABASE_URL` on the Render web service using the database's Internal Database URL. Both services must share a region for the private connection. The connection string contains credentials and belongs in environment configuration, not source control.
+
+Successful initialization logs:
 
 ```json
 {"event":"database.ready","database":"PostgreSQL"}
 ```
 
-The server creates `users` and `scim_resources` if they do not already exist. Existing PostgreSQL rows are preserved. A connection failure stops startup; it does not silently fall back to SQLite.
+Startup creates the required tables and index if absent, preserving existing PostgreSQL rows. Accounts persist independently of application restarts, subject to the database service's lifecycle and retention policy.
 
-## Existing accounts
+## Data model
 
-This change does not copy data from either SQLite database. PostgreSQL starts empty unless already populated. Recreate fictional SCIM accounts with Postman and record the new IDs. For an account that will be SCIM-managed, link its Auth0 identity before attempting SAML login, to avoid creating a separate JIT account.
+| Table | Responsibility |
+| --- | --- |
+| users | Operational account, identity mapping, profile, store and active status |
+| scim_resources | SCIM username and complete provisioned resource representation |
 
-The existing `scripts/link-identity.mjs` remains a local SQLite tool. It does not edit the Render database.
+The PostgreSQL schema enforces unique issuer/subject pairs, a foreign key from SCIM resources to accounts, and case-insensitive SCIM username uniqueness. Provisioning writes use transactions across both tables.
 
-## Acceptance checks
+`users.active` is stored as 0 or 1; the SCIM API exposes a boolean. The SCIM resource is stored as JSON text. Provisioning changes should use the API to keep both representations consistent.
 
-1. Confirm `database.ready` says `PostgreSQL` in Render logs.
-2. With the Render environment in Postman, POST a fictional SCIM user and confirm 201. Save the returned ID in the environment variable.
-3. GET the same account; confirm 200 and the same ID.
-4. PATCH active to false and true; check the metrics widget after each change.
-5. Sign in using a separate JIT test identity and confirm the dashboard opens.
-6. Redeploy the same application code. The browser session ends, but GET must still return the same SCIM account ID and values.
+## Operational verification
 
-Render's free PostgreSQL database expires after 30 days. Persistence across application restarts is not a backup or an exemption from that expiry. Export the demo data before the database expires.
+1. Confirm the PostgreSQL startup event.
+2. Create and retrieve a SCIM account, recording its ID.
+3. Update active status and confirm matching API and metrics results.
+4. Redeploy the application and retrieve the same account ID.
+5. Verify authentication again; sessions are in memory and reset on restart.
 
-## Viewing with SQL
+The free database service has a scheduled expiry. Confirm the date in the provider dashboard and export demonstration data before expiry. Persistence across application restarts does not constitute a backup.
 
-A desktop PostgreSQL client connects using the **External Database URL**, with TLS enabled. This differs from the internal URL used by the application. The database's network access rules must allow your connection. DB Browser for SQLite cannot open PostgreSQL.
+## Read-only inspection
 
-Once connected, these queries are read-only:
+An authorized desktop PostgreSQL client uses the External Database URL with TLS, subject to database network access rules. This differs from the internal connection used by the hosted application.
 
 ```sql
 SELECT id, email, name, store_id, active, issuer, subject
@@ -48,15 +60,10 @@ FROM scim_resources
 ORDER BY user_name;
 ```
 
-`active` remains an integer (0 or 1), matching the local lab. The API exposes it as a boolean. The SCIM `resource` column stores its JSON representation as text, so both tables must be kept consistent when changing provisioning fields.
+Database credentials should not appear in screenshots, shared query files or repository contents.
 
-## Code and verification
+## Implementation and tests
 
-- `src/postgres.js`: PostgreSQL queries, schema initialization and transactions, using the `pg` driver.
-- `src/sqlite-scim.js`: local SQLite SCIM storage.
-- `src/server.js`: selects storage based on `DATABASE_URL`.
-- `src/app.js` and `src/scim.js`: await database results before sending responses.
+[PostgreSQL storage](../src/postgres.js) manages parameterized queries and transactions. [Server startup](../src/server.js) selects the backend. Local SQL tests use the PGlite PostgreSQL engine and cover persistence, rollback and identity behavior; hosted networking and credentials require deployment acceptance.
 
-`./scripts/local.sh test` includes SQLite/SAML regression tests and PostgreSQL SQL tests using PGlite, an embedded PostgreSQL engine. These exercise rollback, account linking, metrics, provisioning and data persistence after closing/reopening a test database. They do not verify Render networking, TLS or credentials; the acceptance checks above do that.
-
-The metrics endpoint uses GraphQL.js and a read-only schema; see [GRAPHQL-METRICS.md](GRAPHQL-METRICS.md). The same resolver interface supports PostgreSQL and SQLite.
+Related: [SCIM API](SCIM-FIRST-EXERCISE.md), [GraphQL metrics](GRAPHQL-METRICS.md).

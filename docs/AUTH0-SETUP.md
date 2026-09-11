@@ -1,91 +1,74 @@
-# Módulo 01 — conectar Auth0 ao StoreOps
+# SAML SSO configuration
 
-Objetivo: você configurar o IdP e conseguir explicar cada campo. O login real só estará validado depois dos testes com seu tenant.
+[Documentation index](README.md)
 
-## 1. Criar aplicação
+StoreOps acts as a SAML service provider (SP), with Auth0 as the identity provider (IdP). This guide covers an SP-initiated sign-in integration for the demonstration environment.
 
-No painel Auth0, abra **Applications → Applications → Create Application**.
-Nome: **StoreOps Identity Lab**. Tipo: **Regular Web Applications**.
+## Configuration responsibilities
 
-Em **Addons**, habilite **SAML2 Web App**. Este fluxo usa Auth0 como IdP.
-Não crie uma Enterprise SAML Connection: ela serve para o sentido oposto.
-A disponibilidade contratual do addon deve ser confirmada no seu tenant; este guia não exige compra ou upgrade.
+| Owner | Configuration |
+| --- | --- |
+| Identity administrator | Auth0 application, SAML addon, user assignment and Post Login Action |
+| Application administrator | Trusted issuer, signing certificate, callback URL and SP entity ID |
+| Implementation team | Attribute mapping, identity linking and acceptance verification |
 
-## 2. Configurar o addon
+## Service provider settings
 
-Em **Application Callback URL**, cole:
+Define the application environment before configuring Auth0:
 
-```text
-http://localhost:3000/auth/saml/acs
-```
+| Setting | Purpose |
+| --- | --- |
+| `APP_BASE_URL` | Application origin; HTTPS for the hosted environment |
+| `SP_ENTITY_ID` | SP identifier; must match the SAML audience |
+| ACS URL | `<APP_BASE_URL>/auth/saml/acs` |
+| `IDP_SSO_URL` | Identity Provider Login URL supplied by Auth0 |
+| `IDP_ISSUER` | Exact issuer supplied by Auth0 |
+| `IDP_CERT_PEM` | Complete public signing certificate in PEM format |
+| `IDP_CERT_PATH` | Alternative path to a PEM file for local development |
+| `JIT_ENABLED` | Whether an authorized first login may create an account |
 
-Em **Settings**, cole o conteúdo de `config/auth0-addon.json` e salve.
+The supplied SP entity ID is `urn:storeops:local`. Despite its name, it is an identifier and may be retained for the hosted demo when both sides agree. The callback must use the actual environment URL.
 
-- Audience identifica o StoreOps: `urn:storeops:local`.
-- ACS/Recipient é o endereço que recebe a resposta.
-- NameID vem do `user_id` estável do Auth0, não do e-mail.
-- O Auth0 assina a assertion com RSA-SHA256. `signResponse` permanece `false` porque a aplicação exige a assertion assinada.
-- O navegador entrega o POST em localhost; neste módulo SAML não é necessário publicar um endpoint para o servidor Auth0 acessá-lo diretamente.
+## Auth0 application
 
-## 3. Criar um usuário de laboratório
+Create a Regular Web Application with the SAML2 Web App addon and enable its database connection. Use [the addon template](../config/auth0-addon.json) as the starting configuration.
 
-Habilite uma conexão Database para a aplicação e crie um usuário de teste nessa conexão em **User Management → Users**. Use um e-mail sob seu controle e defina a senha diretamente no Auth0.
+Set the Application Callback URL, JSON `recipient` and JSON `destination` to the environment's ACS URL. The template contains localhost values that must be replaced for hosted use. Set `audience` to the configured SP entity ID.
 
-No perfil desse usuário, edite **app_metadata** (não `user_metadata`):
+The template uses a persistent NameID derived from Auth0's stable user ID, RSA-SHA256 signatures and SHA-256 digests. StoreOps requires a signed assertion; a response signature is not required by this configuration.
+
+## Assignment and attribute mapping
+
+Create and deploy [the Post Login Action](../config/auth0-post-login-action.js), attach it to the login flow, and set its `STOREOPS_CLIENT_ID` secret to the application's Client ID. This is an identifier, not the Client Secret.
+
+Assign a fictional demonstration user through administrator-controlled `app_metadata`:
 
 ```json
-{"storeops_access": true, "storeId": "101"}
+{
+  "storeops_access": true,
+  "storeId": "101"
+}
 ```
 
-Essa configuração administrativa representa a atribuição do usuário à aplicação. Para outro usuário, use loja `102`. Não use dados reais de clientes.
+The Action requires an assigned user and store `101` or `102`, then sets `email`, `displayName` and `storeId`. For SCIM-managed accounts, StoreOps preserves the provisioned profile and store after authentication. For JIT accounts, it uses the mapped attributes.
 
-## 4. Autorizar e mapear atributos com uma Action
+Copy the issuer, login URL and signing certificate from the addon configuration into the application environment. No Auth0 Management API credential or signing private key is required.
 
-Em **Actions**, crie uma Action customizada para **Login / Post Login**. Cole `config/auth0-post-login-action.js`.
+## Acceptance criteria
 
-Na Action, adicione o secret `STOREOPS_CLIENT_ID` com o **Client ID** da aplicação (esse identificador não é o Client Secret).
-Faça **Deploy**, adicione a Action ao fluxo de Login e aplique/salve o fluxo.
+- Start sign-in from StoreOps, rather than an IdP-initiated test.
+- An assigned user reaches the dashboard with the expected account and store.
+- Repeat sign-in preserves the account ID.
+- A linked SCIM account displays **SCIM account preserved — SAML sign-in**.
+- A new user cannot be created when JIT is disabled.
+- Invalid signatures, audience, issuer, timing or request correlation are rejected.
 
-A Action limita o acesso aos usuários com `app_metadata.storeops_access=true` e envia `storeId`, `email` e `displayName`. Usuários sem essa atribuição devem ser negados mesmo que consigam autenticar no tenant.
+For a provisioned account, complete [identity linking](SCIM-SAML-LINKING.md) before its first SAML login. Otherwise, JIT may create a separate account.
 
-## 5. Configurar o StoreOps
+## Operational behavior
 
-Na aba **Usage** do addon, obtenha:
+Auth0 and StoreOps maintain separate sessions. Local logout does not end the Auth0 session. Auth0 assignment changes apply to new authentication attempts; SCIM deactivation also blocks protected StoreOps requests. Session state resets on application restart.
 
-| Auth0 | StoreOps `.env` |
-|---|---|
-| Identity Provider Login URL | `IDP_SSO_URL` |
-| Issuer | `IDP_ISSUER` |
-| Certificado público PEM | Salvar em `config/auth0-signing.pem` |
+The login timeline at `/activity` records StoreOps-observed events for the same browser context. It does not expose Auth0's internal authentication steps.
 
-Copie os valores exatamente como exibidos. Não deduza o Issuer pelo domínio.
-Não é necessário Client Secret, token da Management API ou chave privada.
-
-Reinicie o servidor e acesse `http://localhost:3000` no mesmo computador. Clique **Entrar com SSO**. Não use o botão de teste do addon como teste de aceite: o laboratório exige uma solicitação iniciada pelo StoreOps.
-
-## 6. Teste guiado
-
-1. Login de usuário autorizado: abrir dashboard da loja correta e mostrar conta criada por JIT.
-2. Logout local e novo login: preservar identificador interno, mostrar conta existente.
-3. Usuário da loja 102: mostrar somente loja 102. Parâmetros de URL não escolhem a loja.
-4. Remover `storeops_access` no Auth0 e tentar novo login: acesso negado pelo IdP.
-5. Restaurar acesso. Remover `storeId`: acesso negado; não criar conta parcial.
-6. Alterar audience temporariamente: rejeitar; restaurar e iniciar login novamente.
-7. Usar certificado incorreto: rejeitar; restaurar e reiniciar.
-8. `JIT_ENABLED=false` e novo usuário: negar criação; contas existentes ativas continuam funcionando.
-
-Logout encerra somente a sessão StoreOps, não a sessão Auth0. Mudanças no Auth0 não revogam automaticamente uma sessão local já aberta neste módulo (expira em uma hora). SCIM/revogação serão tratados depois.
-
-## Conceitos para explicar em voz alta
-
-- Auth0 autentica; StoreOps confia no certificado configurado para validar a assertion.
-- SAML comprova a identidade; JIT cria a conta local após a validação.
-- Autenticação não basta: a atribuição e a loja determinam o acesso.
-- O vínculo `(issuer, NameID)` preserva a conta quando o e-mail muda.
-- `InResponseTo` relaciona a resposta à solicitação; o fluxo também verifica o navegador que iniciou o login.
-
-## Referências oficiais
-
-- https://auth0.com/docs/authenticate/single-sign-on/outbound-single-sign-on/configure-auth0-saml-identity-provider
-- https://auth0.com/docs/authenticate/protocols/saml/saml-configuration/customize-saml-assertions
-- https://auth0.com/docs/actions/reference/post-login/post-login-api-object
+Implementation: [SAML configuration](../src/config.js), [login routes](../src/app.js).

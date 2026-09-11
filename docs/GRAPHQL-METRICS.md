@@ -1,50 +1,92 @@
-# GraphQL Metrics Widget exercise
+# GraphQL metrics API
 
-The lab exposes a read-only GraphQL endpoint at `POST /api/graphql`, implemented with GraphQL.js. It validates requests against the schema in `src/metrics-graphql.js` and returns only the requested fields. The resolver reads PostgreSQL on Render or SQLite locally.
+[Documentation index](README.md)
 
-Example request:
+The read-only metrics API supplies account totals to the StoreOps widget. GraphQL.js validates queries against an explicit schema and returns the fields selected by the client.
 
-```json
-{
-  "query": "query MetricsWidget { metrics { totalUsers activeUsers inactiveUsers usersByStore { storeId users } } }"
+## Request contract
+
+```http
+POST {{baseUrl}}/api/graphql
+Content-Type: application/json
+```
+
+| Body field | Type | Requirement |
+| --- | --- | --- |
+| query | String | Required; maximum 12,000 characters |
+| variables | Object | Optional |
+| operationName | String | Optional; selects a named operation |
+
+## Schema
+
+```graphql
+type Query {
+  metrics: Metrics!
+}
+
+type Metrics {
+  totalUsers: Int!
+  activeUsers: Int!
+  inactiveUsers: Int!
+  usersByStore: [StoreCount!]!
+}
+
+type StoreCount {
+  storeId: String!
+  users: Int!
 }
 ```
 
-Example response:
+Counts include JIT and SCIM accounts. Store counts include both active and inactive users; stores without accounts are omitted. No store filter is defined.
+
+## Field selection
+
+```json
+{
+  "query": "{ metrics { activeUsers } }"
+}
+```
+
+Illustrative response:
 
 ```json
 {
   "data": {
     "metrics": {
-      "totalUsers": 3,
-      "activeUsers": 3,
-      "inactiveUsers": 0,
-      "usersByStore": [{ "storeId": "101", "users": 2 }, { "storeId": "102", "users": 1 }]
+      "activeUsers": 4
     }
   }
 }
 ```
 
-## Observe field selection in Postman
-
-Keep the method POST and Body raw/JSON. Send:
+To request store counts, select the nested fields:
 
 ```json
-{"query":"{ metrics { activeUsers } }"}
+{
+  "query": "{ metrics { totalUsers usersByStore { storeId users } } }"
+}
 ```
 
-Only `data.metrics.activeUsers` is returned. Add `totalUsers` to the selection and it appears in the response. Request `unknownCount` instead and GraphQL returns a validation error without reading the database.
+Named operations, variables, directives, aliases and fragments are supported. Unknown fields are rejected before the resolver reads the database.
 
-The existing widget still requests all four metric fields. It checks both HTTP failures and the GraphQL `errors` array.
+## Execution and errors
 
-## Schema and resolver
+The resolver calls the storage backend's metrics method. PostgreSQL serves the hosted application; SQLite serves local development. A single metrics result is reused within each request, including aliases.
 
-- Schema: defines `Query.metrics`, the three integer counts, and `usersByStore` with `storeId` and `users` fields.
-- Resolver: calls the existing `users.metrics()` method. One database snapshot is reused per request, including queries with multiple aliases.
-- GraphQL.js: parses, validates, and executes the query, selecting the requested response fields. Named operations, variables, directives, aliases and fragments are supported.
+| Result | HTTP status | Response |
+| --- | --- | --- |
+| Valid query | 200 | data containing selected fields |
+| Invalid request or validation failure | 400 | errors |
+| Resolver failure | 200 | data and errors; data may be null |
 
-Body fields: `query` (required string), `variables` (optional object), `operationName` (optional string). Invalid requests/validation return HTTP 400 with `errors`. Execution errors return HTTP 200 with `data` and `errors`; storage failure messages are sanitized.
+Clients must inspect the GraphQL errors array as well as HTTP status. Database failure details are sanitized. The widget implements both checks.
 
-This is a small real GraphQL implementation, with only a read-only query schema. There are no mutations or subscriptions. The endpoint exposes aggregate lab counts publicly; it is not a store-scoped authorization API and exposes no account email or identity fields. Query text is limited to 12,000 characters, and the existing HTTP body limit still applies. Field selection controls the JSON response, not which aggregate SQL columns are calculated.
+Field selection controls response fields; it does not dynamically optimize SQL calculations. The schema supports queries only, with no mutations or subscriptions.
 
-Reference: https://github.com/graphql/graphql-js
+## Access scope and observability
+
+The endpoint exposes aggregate demonstration counts without authentication. It does not expose individual identity fields and is not scoped to the signed-in user's store.
+
+Server events report query receipt, completion and rejection without logging raw queries or database errors.
+
+Implementation: [schema and resolver](../src/metrics-graphql.js), [browser client](../public/metrics.js), [widget view](../views/metrics.html).

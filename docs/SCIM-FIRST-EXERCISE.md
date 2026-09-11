@@ -1,45 +1,86 @@
-# SCIM exercise 01 — create Ana before login
+# SCIM provisioning API
 
-This is a manual provisioning client calling a small SCIM 2.0 API subset. It is not an automated Auth0 provisioning integration or a complete SCIM implementation.
+[Documentation index](README.md)
 
-## Run locally
+The provisioning API creates and maintains StoreOps accounts independently of browser authentication. The demonstration uses Postman as the provisioning client; automated IdP provisioning is not configured.
 
-1. `./scripts/local.sh setup-scim` generates a token in `.env` without printing it.
-2. Restart the server with `./scripts/local.sh start`.
-3. In another terminal, run `./scripts/local.sh create-ana`.
+## Endpoint and authentication
 
-The last command reads `config/ana-scim.json`, sends it to `POST /scim/v2/Users`, and retrieves the resulting account with GET. A new account returns **201 Created** and a `Location` header. Repeating creation returns **409 Conflict**; the script then looks up and reads the existing account. It never logs in as Ana.
+Base path: `{{baseUrl}}/scim/v2`.
 
-## Field mapping
+Every request requires `Authorization: Bearer {{scimToken}}`. The server compares the credential with `SCIM_TOKEN`. JSON request bodies may use `application/scim+json` or `application/json`.
 
-| SCIM | Local SQLite account |
-|---|---|
-| Server-generated `id` | `users.id` |
-| `displayName` | `users.name` |
-| First `emails[].value` | `users.email` |
-| Enterprise `department` | `users.store_id` (lab mapping: 101 or 102) |
-| `active` | `users.active` |
+| Method and path | Behavior |
+| --- | --- |
+| POST /Users | Create an account and SCIM representation atomically |
+| GET /Users | List provisioned accounts |
+| GET /Users/{id} | Read a provisioned account |
+| PATCH /Users/{id} | Replace supported store or active fields |
 
-`externalId` and the SCIM representation are stored in `scim_resources`. The shared `users` table stores the operational account. Creation of both records occurs in one transaction.
+## Create an account
 
-## Identity linking is a separate exercise
+```json
+{
+  "schemas": [
+    "urn:ietf:params:scim:schemas:core:2.0:User",
+    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+  ],
+  "externalId": "demo-employee-001",
+  "userName": "employee.demo@example.com",
+  "displayName": "Demo Employee",
+  "active": true,
+  "emails": [{"value": "employee.demo@example.com"}],
+  "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+    "department": "101"
+  }
+}
+```
 
-New SCIM accounts initially use the reserved issuer `urn:storeops:unlinked-scim`. Creation does not create an Auth0 user, grant access in Auth0 or automatically link accounts by email. Follow [SCIM-SAML-LINKING.md](SCIM-SAML-LINKING.md) to explicitly link an Auth0 identity to an existing SCIM account. Until linked, do not attempt SAML login as that user, as JIT may create a separate account.
+A successful request returns HTTP 201, the generated `id`, and a `Location` header. Duplicate usernames are rejected case-insensitively with 409. The username, display name, one email and a supported department are required; active defaults to true.
 
-## What is observable
+| SCIM attribute | Application storage |
+| --- | --- |
+| id | users.id |
+| displayName | users.name |
+| emails[0].value | users.email |
+| Enterprise department | users.store_id; supported values 101 and 102 |
+| active | users.active |
+| externalId and full representation | scim_resources.resource |
 
-The terminal server emits `scim.create.received`, `scim.user.created`, `scim.user.read` and rejection events. The client command displays the fictional payload, HTTP status and persisted response. The `/activity` browser timeline remains specific to SAML logins; SCIM requests have no browser session.
+Creating a StoreOps account does not create an Auth0 user or establish an identity link. JIT-only accounts are excluded from SCIM reads by this implementation.
 
-## Scope and security
+## Update access
 
-Bearer token authentication, localhost only, create/read users, case-insensitive userName uniqueness, userName equality filter and basic pagination. PATCH supports explicit-path `replace` for enterprise `department` (101 or 102) and boolean `active`. Other PATCH operations and attributes, PUT, groups, schema discovery, automatic IdP provisioning and production deployment are not implemented. A valid token is required for reads as well as writes. The token must not be committed or pasted into screenshots.
+Send the following body to `PATCH /Users/{{userId}}`:
 
-## Exercise 02 — update with Postman
+```json
+{
+  "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+  "Operations": [
+    {"op": "replace", "path": "active", "value": false}
+  ]
+}
+```
 
-Restart the server in your VS Code terminal after changing the code. Select PATCH on the same `/scim/v2/Users/{id}` URL used for GET. Keep Bearer Token authorization, choose Body → raw → JSON, and paste `config/patch-store.json` to transfer the user to store 101.
+Use true to restore access. To change stores, use path `urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department` with string value `"101"` or `"102"`.
 
-Expected response: 200 OK, same id and creation time, updated department and lastModified. A following GET and the SQLite users table must both show the new store. Server logs include `scim.patch.received` and `scim.user.updated`. Repeating an unchanged value returns 200 and `scim.user.unchanged`.
+Successful updates return 200, preserving the ID and creation time. Invalid operations reject the entire request. Account and SCIM representation writes are transactional. Repeating an unchanged update returns the existing representation.
 
-For deactivation, use the same PatchOp envelope with one operation: `{"op":"replace","path":"active","value":false}`. This updates the local account only; it does not modify Auth0 or establish a SAML identity link. The entire PATCH is rejected if any operation is invalid. Database writes are transactional.
+## Listing and errors
 
-References: https://www.rfc-editor.org/rfc/rfc7643 and https://www.rfc-editor.org/rfc/rfc7644.
+Listing supports `filter=userName eq "employee.demo@example.com"`, `startIndex` from 1 and `count` from 0 to 100. URL-encode query parameters when sending requests.
+
+| Status | Meaning |
+| --- | --- |
+| 400 | Invalid schema, attributes, filter or operations |
+| 401 | Missing or invalid provisioning credential |
+| 404 | SCIM account not found |
+| 409 | Duplicate username |
+| 500 / 503 | Storage failure or unavailable configuration |
+| 501 | Unsupported route or operation |
+
+This is a SCIM subset. Groups, PUT, deletion, schema discovery and general PATCH operations are not implemented. Deactivation affects StoreOps access; it does not disable the Auth0 identity.
+
+Server events report creation, reads, updates and rejections. The browser login timeline is separate from these API events.
+
+Next: [Identity lifecycle and linking](SCIM-SAML-LINKING.md).

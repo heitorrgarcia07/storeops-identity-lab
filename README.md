@@ -143,4 +143,4 @@ This is a focused demonstration, not a production-ready identity platform:
 | [public/metrics.js](public/metrics.js) / [views/metrics.html](views/metrics.html) | Fetch metrics and display the widget. |
 | [test/](test/) | Automated behavioral checks. |
 
-Further walkthroughs: [SCIM](docs/SCIM-FIRST-EXERCISE.md), [administrative linking](docs/ADMIN-LINK-API.md), [GraphQL](docs/GRAPHQL-METRICS.md), and [Auth0 configuration (Portuguese)](docs/AUTH0-SETUP.md).
+Implementation references: [documentation index](docs/README.md), [SCIM provisioning](docs/SCIM-FIRST-EXERCISE.md), [administrative linking](docs/ADMIN-LINK-API.md), [GraphQL metrics](docs/GRAPHQL-METRICS.md), and [SAML SSO configuration](docs/AUTH0-SETUP.md).

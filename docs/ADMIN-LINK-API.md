@@ -1,18 +1,25 @@
-# Link a SCIM account to Auth0 from Postman
+# Administrative identity-link API
 
-This is a custom administrative API, not a standard SCIM operation. It replaces the manual SQL step. It does not create an Auth0 account or verify ownership through Auth0: the administrator must obtain the correct User ID from Auth0 and confirm it belongs to the intended person.
+[Documentation index](README.md)
 
-## Configure
+This endpoint associates an existing SCIM account with an Auth0 identity. It is a custom StoreOps administrative operation, not part of the SCIM standard.
 
-Generate a new credential locally with `openssl rand -hex 32`. Store it as `ADMIN_TOKEN` in Render and as `adminToken` in the Postman Render environment. Never reuse `SCIM_TOKEN`. Do not commit or share either token. Deploy the updated application.
+## Prerequisites
 
-Create a request:
+- An existing SCIM-provisioned account.
+- The verified Auth0 user ID for the intended person.
+- A configured server `IDP_ISSUER`.
+- A distinct `ADMIN_TOKEN` of at least 32 characters; reusing `SCIM_TOKEN` is rejected.
 
-```text
+Credentials are supplied through deployment environment configuration. The API does not create users in Auth0 or independently verify ownership through the Auth0 Management API.
+
+## Request
+
+```http
 POST {{baseUrl}}/api/admin/identity-links
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
 ```
-
-Override collection authorization for this request: **Bearer Token** `{{adminToken}}`. Body: **raw / JSON**:
 
 ```json
 {
@@ -21,27 +28,33 @@ Override collection authorization for this request: **Bearer Token** `{{adminTok
 }
 ```
 
-Set `auth0UserId` in the selected environment to the correct Auth0 `user_id`. The server takes the issuer from its own `IDP_ISSUER`; callers cannot override it.
+| Field | Meaning |
+| --- | --- |
+| userId | Account ID returned by the SCIM creation response |
+| subject | Corresponding Auth0 database user ID, beginning with auth0\| |
 
-## Results
+The server uses its configured issuer; an issuer override is not accepted in the body. In Postman, use the administrative Bearer credential for this request rather than inherited SCIM authorization.
 
-- 200: linked, or the identical link already exists (safe to repeat).
-- 400: invalid fields or body.
-- 401: missing or incorrect administrative credential. SCIM credentials alone do not authorize linking.
-- 404: account does not exist.
-- 409: account is not SCIM-managed, already has another identity, or the proposed identity belongs to another account.
-- 503: configuration or database failure.
+## Response contract
 
-Successful responses contain `userId`, `issuer`, `subject` and `status: "linked"`. Profile, store, active state, account ID and SCIM representation are preserved. No automatic merging or relinking is permitted. Terminal events `identity.linked` and `identity.link.rejected` log outcomes without request bodies or credentials. These logs are not a durable administrative audit database.
+HTTP 200 returns `userId`, `issuer`, `subject` and `status: "linked"`. Repeating the same association succeeds without changing account ownership.
 
-## Final guided demo
+| Status | Meaning |
+| --- | --- |
+| 200 | Link established or identical link already present |
+| 400 | Invalid request fields or JSON |
+| 401 | Missing or incorrect administrative credential |
+| 404 | Target account does not exist |
+| 409 | Not SCIM-managed, already linked differently, or identity already assigned |
+| 413 | Body exceeds the endpoint limit |
+| 503 | Missing configuration or storage failure |
 
-1. POST a fictional SCIM user (201); the collection script saves its ID in the Render environment.
-2. Create the corresponding Auth0 database user, set `storeops_access: true` and a valid `storeId` in app_metadata; copy its User ID into `auth0UserId`.
-3. POST the identity link (200). Repeating the same call must still succeed.
-4. Sign in in a private browser window. Confirm the SCIM-preserved result and same account ID.
-5. PATCH active=false through SCIM; refresh the dashboard to observe access blocked, and refresh metrics to see the inactive count.
-6. PATCH active=true and restore access.
-7. Once before the interview, redeploy the same code and GET the same user ID to verify PostgreSQL persistence. Sessions reset; database accounts remain.
+Only issuer and subject change. Profile, store, active status, account ID and SCIM representation remain intact. Conflicts do not trigger automatic merges.
 
-The identity demo is complete after this hosted acceptance run. No additional module is necessary for that story. The metrics endpoint now uses GraphQL.js with a read-only schema and honors field selection; see GRAPHQL-METRICS.md for the data demo. Auth0 user creation and authorization metadata are still manual; Postman simulates the provisioning client. The demo is not a production deployment. Export data before the free database expires.
+## Verification and observability
+
+Following a successful response, perform an SP-initiated login in a fresh browser session. The dashboard should show **SCIM account preserved — SAML sign-in** and the original account ID.
+
+Server events `identity.linked` and `identity.link.rejected` report outcomes without logging credentials or request bodies. They support troubleshooting but are not a durable, per-operator audit trail.
+
+Related: [Identity model](SCIM-SAML-LINKING.md), [SCIM API](SCIM-FIRST-EXERCISE.md).

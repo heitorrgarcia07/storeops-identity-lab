@@ -1,25 +1,51 @@
-# Link a provisioned account to Auth0
+# Identity lifecycle and account linking
 
-Use the local account id returned by SCIM and the user_id copied from the correct Auth0 user. The script uses IDP_ISSUER from .env. This is a manual administrative exercise: no automatic IdP provisioning or email-based matching is performed.
+[Documentation index](README.md)
 
-Stop the server in VS Code with Control+C. Preview:
+StoreOps separates authentication from provisioning. A SAML identity establishes who signed in; a SCIM account owns the provisioned profile, store and active status.
 
-```sh
-./scripts/local.sh link-user LOCAL_USER_ID 'auth0|USER_ID'
-```
+## Identity model
 
-Check the account name, store and identity. Run the same command with `--apply` to save the link, then restart with `./scripts/local.sh start`. Quote the Auth0 identifier because `|` has special meaning in a shell.
+| Identifier | Source | Purpose |
+| --- | --- | --- |
+| Account ID | StoreOps POST /scim/v2/Users | Stable application account reference |
+| Subject | Auth0 user_id | Stable identity within the IdP |
+| Issuer | Server IDP_ISSUER | Trusted identity provider |
 
-The link updates only `users.issuer` and `users.subject`. Existing profile, store, status and account id remain unchanged. The script refuses to take an identity from another account or replace an existing different identity. Repeating the same link is safe. Close any uncommitted DB Browser edits before linking.
+New SCIM accounts use the reserved issuer `urn:storeops:unlinked-scim` and their account ID as a placeholder subject. Linking replaces those two identity fields while preserving the account ID, profile, store, status and SCIM representation.
 
-For linked SCIM accounts, SAML verifies identity and the local database controls the profile, store and active status. SAML does not overwrite SCIM data. Inactive accounts are refused even with JIT enabled. The current Auth0 Action still requires storeops_access=true and a valid storeId in app_metadata; keep those set for the exercise.
+Email equality does not establish a link. An administrator confirms that the two records represent the same person.
 
-## Acceptance
+## Implementation sequence
 
-1. Sign in as the linked Auth0 user in a private browser window to avoid an existing session for a different user. Use the same private browser context for the entire login.
-2. Confirm the original SCIM id and `SCIM account preserved — SAML sign-in` in the dashboard. Event 8 says `SCIM account recognized`.
-3. Change the store via SCIM. Set a different valid store in Auth0 metadata. A new login must preserve the SCIM store.
-4. PATCH active=false. A fresh SAML login must fail with `Account inactive` and must not create a new account. An existing dashboard request is also blocked while inactive; previously rendered HTML is not remotely erased.
-5. Restore active=true to re-enable access. This version does not permanently revoke an old session on deactivation: an unexpired session may work again after reactivation. Session revocation/versioning is a later exercise.
+1. Provision the StoreOps account through SCIM.
+2. Create or identify the corresponding Auth0 user and configure its authorized application metadata.
+3. Submit the link through the [administrative API](ADMIN-LINK-API.md).
+4. Initiate SAML sign-in from StoreOps.
+5. Verify the preserved account ID and provisioned attributes.
 
-No real user link is performed by automated tests; they use temporary accounts and signed local fixtures.
+Complete linking before the first login for this identity. With JIT enabled, an unlinked identity may otherwise create a separate account.
+
+## Ownership and conflict handling
+
+The trusted identity key is the issuer/subject pair. The application refuses to take an identity from another account or replace an existing different identity. Identical link requests can be repeated safely.
+
+For a linked SCIM account, subsequent SAML sign-ins do not overwrite its profile, store or active state. The Auth0 Action still requires application assignment and a valid store attribute to allow authentication.
+
+The local SQLite script is a development utility; it is not a remote database administration mechanism. Hosted implementations use the administrative API.
+
+## Acceptance matrix
+
+| Scenario | Expected result |
+| --- | --- |
+| First login after linking | SCIM account preserved; same internal ID |
+| Repeat identical link | Success; account data unchanged |
+| Identity belongs to another account | Conflict; no merge |
+| Different identity proposed for linked account | Conflict; no replacement |
+| SCIM store differs from a valid Auth0 store attribute | SCIM store retained |
+| SCIM active=false | New sign-in and protected dashboard requests blocked |
+| SCIM active=true restored | Access possible again |
+
+Deactivation does not erase a previously rendered browser page. It is enforced on subsequent protected requests. Reactivation may restore an unexpired session; permanent session revocation/versioning is not implemented.
+
+See [SSO configuration](AUTH0-SETUP.md) and [demonstration acceptance](INTERVIEW-DEMO.md).
