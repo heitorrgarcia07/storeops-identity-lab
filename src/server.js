@@ -12,4 +12,4 @@ const configuredPort = Number(new URL(baseUrl).port || 0);
 if (configuredPort && configuredPort !== port)
     throw new Error('PORT must match APP_BASE_URL');
 const host = process.env.HOST || '0.0.0.0';
-app.listen(port, host, () => console.log(`StoreOps: ${baseUrl} — ${missing.length ? 'Auth0 setup pending' : 'SAML configured'}`));
+app.listen(port, host, () => console.log(`DemoMart: ${baseUrl} — ${missing.length ? 'Auth0 setup pending' : 'SAML configured'}`));

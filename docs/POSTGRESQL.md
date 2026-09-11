@@ -2,7 +2,7 @@
 
 [Documentation index](README.md)
 
-StoreOps supports PostgreSQL for the hosted demonstration and SQLite for local development. The application chooses its storage backend at startup.
+DemoMart supports PostgreSQL for the hosted demonstration and SQLite for local development. The application chooses its storage backend at startup.
 
 ## Environment model
 

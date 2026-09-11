@@ -2,13 +2,13 @@
 
 [Documentation index](README.md)
 
-StoreOps separates authentication from provisioning. A SAML identity establishes who signed in; a SCIM account owns the provisioned profile, store and active status.
+DemoMart separates authentication from provisioning. A SAML identity establishes who signed in; a SCIM account owns the provisioned profile, store and active status.
 
 ## Identity model
 
 | Identifier | Source | Purpose |
 | --- | --- | --- |
-| Account ID | StoreOps POST /scim/v2/Users | Stable application account reference |
+| Account ID | DemoMart POST /scim/v2/Users | Stable application account reference |
 | Subject | Auth0 user_id | Stable identity within the IdP |
 | Issuer | Server IDP_ISSUER | Trusted identity provider |
 
@@ -18,10 +18,10 @@ Email equality does not establish a link. An administrator confirms that the two
 
 ## Implementation sequence
 
-1. Provision the StoreOps account through SCIM.
+1. Provision the DemoMart account through SCIM.
 2. Create or identify the corresponding Auth0 user and configure its authorized application metadata.
 3. Submit the link through the [administrative API](ADMIN-LINK-API.md).
-4. Initiate SAML sign-in from StoreOps.
+4. Initiate SAML sign-in from DemoMart.
 5. Verify the preserved account ID and provisioned attributes.
 
 Complete linking before the first login for this identity. With JIT enabled, an unlinked identity may otherwise create a separate account.

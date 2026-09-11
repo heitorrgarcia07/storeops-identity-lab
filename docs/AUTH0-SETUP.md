@@ -2,7 +2,7 @@
 
 [Documentation index](README.md)
 
-StoreOps acts as a SAML service provider (SP), with Auth0 as the identity provider (IdP). This guide covers an SP-initiated sign-in integration for the demonstration environment.
+DemoMart acts as a SAML service provider (SP), with Auth0 as the identity provider (IdP). This guide covers an SP-initiated sign-in integration for the demonstration environment.
 
 ## Configuration responsibilities
 
@@ -35,7 +35,7 @@ Create a Regular Web Application with the SAML2 Web App addon and enable its dat
 
 Set the Application Callback URL, JSON `recipient` and JSON `destination` to the environment's ACS URL. The template contains localhost values that must be replaced for hosted use. Set `audience` to the configured SP entity ID.
 
-The template uses a persistent NameID derived from Auth0's stable user ID, RSA-SHA256 signatures and SHA-256 digests. StoreOps requires a signed assertion; a response signature is not required by this configuration.
+The template uses a persistent NameID derived from Auth0's stable user ID, RSA-SHA256 signatures and SHA-256 digests. DemoMart requires a signed assertion; a response signature is not required by this configuration.
 
 ## Assignment and attribute mapping
 
@@ -50,13 +50,13 @@ Assign a fictional demonstration user through administrator-controlled `app_meta
 }
 ```
 
-The Action requires an assigned user and store `101` or `102`, then sets `email`, `displayName` and `storeId`. For SCIM-managed accounts, StoreOps preserves the provisioned profile and store after authentication. For JIT accounts, it uses the mapped attributes.
+The Action requires an assigned user and store `101` or `102`, then sets `email`, `displayName` and `storeId`. For SCIM-managed accounts, DemoMart preserves the provisioned profile and store after authentication. For JIT accounts, it uses the mapped attributes.
 
 Copy the issuer, login URL and signing certificate from the addon configuration into the application environment. No Auth0 Management API credential or signing private key is required.
 
 ## Acceptance criteria
 
-- Start sign-in from StoreOps, rather than an IdP-initiated test.
+- Start sign-in from DemoMart, rather than an IdP-initiated test.
 - An assigned user reaches the dashboard with the expected account and store.
 - Repeat sign-in preserves the account ID.
 - A linked SCIM account displays **SCIM account preserved — SAML sign-in**.
@@ -67,8 +67,8 @@ For a provisioned account, complete [identity linking](SCIM-SAML-LINKING.md) bef
 
 ## Operational behavior
 
-Auth0 and StoreOps maintain separate sessions. Local logout does not end the Auth0 session. Auth0 assignment changes apply to new authentication attempts; SCIM deactivation also blocks protected StoreOps requests. Session state resets on application restart.
+Auth0 and DemoMart maintain separate sessions. Local logout does not end the Auth0 session. Auth0 assignment changes apply to new authentication attempts; SCIM deactivation also blocks protected DemoMart requests. Session state resets on application restart.
 
-The login timeline at `/activity` records StoreOps-observed events for the same browser context. It does not expose Auth0's internal authentication steps.
+The login timeline at `/activity` records DemoMart-observed events for the same browser context. It does not expose Auth0's internal authentication steps.
 
 Implementation: [SAML configuration](../src/config.js), [login routes](../src/app.js).

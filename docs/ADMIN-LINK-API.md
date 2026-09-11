@@ -2,7 +2,7 @@
 
 [Documentation index](README.md)
 
-This endpoint associates an existing SCIM account with an Auth0 identity. It is a custom StoreOps administrative operation, not part of the SCIM standard.
+This endpoint associates an existing SCIM account with an Auth0 identity. It is a custom DemoMart administrative operation, not part of the SCIM standard.
 
 ## Prerequisites
 

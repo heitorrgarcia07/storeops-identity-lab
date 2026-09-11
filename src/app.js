@@ -62,7 +62,7 @@ export function createApp(opts) {
             traces.set(traceKey, trace);
             req.loginTrace = trace;
             res.cookie('storeops_activity', traceKey, { httpOnly: true, sameSite: 'lax', maxAge: 3_600_000, path: '/' });
-            record(trace, 'login.started', '1 · Login requested', 'Your browser asked the StoreOps backend to start a login.');
+            record(trace, 'login.started', '1 · Login requested', 'Your browser asked the DemoMart backend to start a login.');
             const redirect = await opts.saml.getAuthorizeUrlAsync(state, undefined, {});
             const xml = inflateRawSync(Buffer.from(new URL(redirect).searchParams.get('SAMLRequest'), 'base64')).toString();
             const requestId = xml.match(/\bID="([^"]+)"/)?.[1];
@@ -70,8 +70,8 @@ export function createApp(opts) {
                 throw new Error('Missing generated request ID');
             flows.set(state, { browser, requestId, trace, expires: Date.now() + 300_000 });
             res.cookie('storeops_flow', browser, { httpOnly: true, sameSite: 'lax', maxAge: 300_000, path: '/' });
-            record(trace, 'saml.request.created', '2 · SAML request created', 'StoreOps saved a short-lived request so it can match the response to this login.');
-            record(trace, 'auth0.redirect', '3 · Browser sent to Auth0', 'Auth0 handles authentication and the Post Login Action. StoreOps cannot see those internal steps; it is waiting for a response.', 'waiting');
+            record(trace, 'saml.request.created', '2 · SAML request created', 'DemoMart saved a short-lived request so it can match the response to this login.');
+            record(trace, 'auth0.redirect', '3 · Browser sent to Auth0', 'Auth0 handles authentication and the Post Login Action. DemoMart cannot see those internal steps; it is waiting for a response.', 'waiting');
             res.redirect(redirect);
         }
         catch (err) {
@@ -120,7 +120,7 @@ export function createApp(opts) {
                 throw new IdentityError('Browser does not match login request');
             record(flow.trace, 'browser.verified', '6 · Browser verified', 'The browser finishing this login matches the browser that started it.');
             flows.delete(state);
-            record(flow.trace, 'identity.checking', '7 · Checking account and attributes', 'StoreOps looks up the identity and checks email, displayName, storeId and local account status.');
+            record(flow.trace, 'identity.checking', '7 · Checking account and attributes', 'DemoMart looks up the identity and checks email, displayName, storeId and local account status.');
             const result = await opts.users.login(flow.profile, opts.issuer, opts.jit);
             if (result.managedBy === 'SCIM') {
                 record(flow.trace, 'account.scim.preserved', '8 · SCIM account recognized', 'The linked account was found. SAML authenticated the identity; the profile, store and active status managed by SCIM were preserved.');
@@ -134,7 +134,7 @@ export function createApp(opts) {
             sessions.set(sessionId, { userId: result.user.id, trace: flow.trace, expires: Date.now() + 3_600_000, csrf: token(), created: result.created, managedBy: result.managedBy });
             res.clearCookie('storeops_flow', { path: '/' });
             res.cookie('storeops_session', sessionId, { httpOnly: true, sameSite: 'lax', maxAge: 3_600_000, path: '/' });
-            record(flow.trace, 'session.created', '9 · StoreOps session created', 'The backend saved a one-hour session and sent an HTTP-only cookie to the browser. The cookie value is not logged.');
+            record(flow.trace, 'session.created', '9 · DemoMart session created', 'The backend saved a one-hour session and sent an HTTP-only cookie to the browser. The cookie value is not logged.');
             res.redirect('/dashboard');
         }
         catch (err) {
@@ -165,7 +165,7 @@ export function createApp(opts) {
         if (!session || req.body.csrf !== session.csrf)
             return res.sendStatus(403);
         sessions.delete(id);
-        record(session.trace, 'session.ended', 'StoreOps session ended', 'The local session was removed. The separate Auth0 session may still be active.');
+        record(session.trace, 'session.ended', 'DemoMart session ended', 'The local session was removed. The separate Auth0 session may still be active.');
         res.clearCookie('storeops_session', { path: '/' });
         res.redirect('/');
     });

@@ -4,7 +4,7 @@
 
 ## Business scenario
 
-A fictional retail organization requires consistent employee onboarding, single sign-on, store assignment and access removal. StoreOps demonstrates how these requirements connect across identity, provisioning and reporting services.
+A fictional retail organization requires consistent employee onboarding, single sign-on, store assignment and access removal. DemoMart demonstrates how these requirements connect across identity, provisioning and reporting services.
 
 The implementation uses Auth0 for SAML authentication, SCIM endpoints for account lifecycle management, an administrative identity-link API, and GraphQL for aggregate account metrics.
 

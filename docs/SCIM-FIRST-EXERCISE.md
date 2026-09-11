@@ -2,7 +2,7 @@
 
 [Documentation index](README.md)
 
-The provisioning API creates and maintains StoreOps accounts independently of browser authentication. The demonstration uses Postman as the provisioning client; automated IdP provisioning is not configured.
+The provisioning API creates and maintains DemoMart accounts independently of browser authentication. The demonstration uses Postman as the provisioning client; automated IdP provisioning is not configured.
 
 ## Endpoint and authentication
 
@@ -47,7 +47,7 @@ A successful request returns HTTP 201, the generated `id`, and a `Location` head
 | active | users.active |
 | externalId and full representation | scim_resources.resource |
 
-Creating a StoreOps account does not create an Auth0 user or establish an identity link. JIT-only accounts are excluded from SCIM reads by this implementation.
+Creating a DemoMart account does not create an Auth0 user or establish an identity link. JIT-only accounts are excluded from SCIM reads by this implementation.
 
 ## Update access
 
@@ -79,7 +79,7 @@ Listing supports `filter=userName eq "employee.demo@example.com"`, `startIndex` 
 | 500 / 503 | Storage failure or unavailable configuration |
 | 501 | Unsupported route or operation |
 
-This is a SCIM subset. Groups, PUT, deletion, schema discovery and general PATCH operations are not implemented. Deactivation affects StoreOps access; it does not disable the Auth0 identity.
+This is a SCIM subset. Groups, PUT, deletion, schema discovery and general PATCH operations are not implemented. Deactivation affects DemoMart access; it does not disable the Auth0 identity.
 
 Server events report creation, reads, updates and rejections. The browser login timeline is separate from these API events.
 

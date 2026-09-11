@@ -3,14 +3,21 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{title}} · StoreOps</title>
+    <title>{{title}} · DemoMart</title>
     <link rel="stylesheet" href="/public/style.css">
 </head>
 <body>
-    <header>StoreOps <span>Identity Lab / 01</span></header>
+    <header class="site-header">
+        <a class="brand" href="/" aria-label="DemoMart home">
+            <span class="brand-mark" aria-hidden="true">DM</span>
+            <span class="brand-name">Demo<span class="brand-mart">Mart</span></span>
+            <span class="brand-cart" aria-hidden="true">🛒</span>
+        </a>
+        <span class="brand-tagline">TEAM PORTAL</span>
+    </header>
     <main>
         {{content}}
-        <footer><a href="/activity" target="_blank" rel="noopener">Watch login activity ↗</a> · <a href="/metrics">Open Metrics Widget</a><br>Independent learning lab · Sample data · SAML + JIT</footer>
+        <footer><a href="/activity" target="_blank" rel="noopener">Watch login activity ↗</a> · <a href="/metrics">Open Metrics Widget</a><br>DemoMart · Fictional retail company · Identity &amp; integration demo</footer>
     </main>
 </body>
 </html>

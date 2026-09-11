@@ -33,7 +33,11 @@ body {
     color:var(--ink);
     font:17px/1.65 system-ui,-apple-system,sans-serif;
 }
-header {
+.site-header {
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:16px 28px;
     background:var(--purple);
     color:white;
     padding:22px 7%;
@@ -41,12 +45,14 @@ header {
     font-weight:750;
     border-bottom:5px solid var(--pink);
 }
-header span {
-    font-size:14px;
-    font-weight:450;
-    color:#e9ddff;
-    margin-left:18px;
-}
+.brand { display:inline-flex; align-items:center; gap:12px; color:white; text-decoration:none; }
+.brand:hover { color:white; }
+.brand:focus-visible { outline-color:var(--cream); }
+.brand-mark { display:grid; place-items:center; width:44px; height:44px; border-radius:12px; background:var(--pink); color:var(--purple); font-size:18px; font-weight:900; letter-spacing:-1px; }
+.brand-name { font-family:"Avenir Next",Avenir,"Trebuchet MS",sans-serif; font-size:30px; font-weight:800; letter-spacing:-1.2px; line-height:1.1; }
+.brand-mart { color:#ff9dc7; }
+.brand-cart { font-size:22px; line-height:1; }
+.brand-tagline { color:#e9ddff; font-size:11px; font-weight:650; letter-spacing:2px; }
 main {
     max-width:828px;
     margin:60px auto;
@@ -135,12 +141,8 @@ footer {
     font-size:13px;
 }
 @media(max-width:520px) {
-    header {
+    .site-header {
         padding:18px 24px;
-    }
-    header span {
-        display:block;
-        margin:2px 0 0;
     }
     main {
         margin:36px auto;

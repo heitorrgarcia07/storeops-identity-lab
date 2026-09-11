@@ -1,12 +1,14 @@
-# StoreOps Identity & Integration Lab
+# DemoMart — Team Portal
 
 A hands-on technical implementation case study for a fictional retail customer: provision a store employee, connect their identity, enable SSO, revoke access, and verify the outcome through API responses, logs, and a metrics widget.
 
 Built as an interview demonstration for a customer-facing integrations role. This is an independent learning project, not an official Zipline product or integration.
 
+DemoMart is the fictional retail brand used throughout the portal. The repository name, hosted URL, SAML identifiers, environment keys and database names retain their original technical values for configuration compatibility.
+
 **[Open the hosted demo](https://storeops-identity-lab.onrender.com/)** · **[Metrics Widget](https://storeops-identity-lab.onrender.com/metrics)** · **[Demo walkthrough](docs/INTERVIEW-DEMO.md)**
 
-The presenter provides a test account for the guided session. Creating an Auth0 account alone does not grant StoreOps access.
+The presenter provides a test account for the guided session. Creating an Auth0 account alone does not grant DemoMart access.
 
 ## Customer scenario
 
@@ -16,7 +18,7 @@ The implementation separates three responsibilities:
 
 | Responsibility | Implementation |
 | --- | --- |
-| Authentication: who is signing in? | Auth0 sends a signed SAML response; StoreOps validates it. |
+| Authentication: who is signing in? | Auth0 sends a signed SAML response; DemoMart validates it. |
 | Provisioning: which account, store and access status should exist? | A SCIM API creates and updates accounts. Postman simulates the customer's provisioning client. |
 | Reporting: what is the current account state? | A GraphQL API reads aggregate database metrics for a browser widget. |
 
@@ -27,7 +29,7 @@ Two onboarding paths are supported: JIT creates an account on its first authoriz
 ```mermaid
 flowchart LR
     B[Browser] -->|Sign-in| A[Auth0]
-    A -->|SAML response via browser| S[StoreOps / Node.js + Express]
+    A -->|SAML response via browser| S[DemoMart / Node.js + Express]
     P[Postman] -->|SCIM provisioning| S
     P -->|Administrative identity link| S
     W[Metrics Widget] -->|GraphQL query| S
@@ -123,7 +125,7 @@ This is a focused demonstration, not a production-ready identity platform:
 - Postman simulates provisioning; automatic IdP-to-SCIM synchronization is not implemented.
 - Auth0 account creation and access metadata are manual.
 - SCIM supports a subset: create, read, limited filtering/pagination, and PATCH replace of active status or store.
-- Sessions, login traces and request state are in memory in one process. Logout ends the StoreOps session, not the Auth0 session. Reactivation can restore an unexpired local session.
+- Sessions, login traces and request state are in memory in one process. Logout ends the DemoMart session, not the Auth0 session. Reactivation can restore an unexpired local session.
 - Metrics expose aggregate lab counts publicly. They are not scoped to the signed-in user's store.
 - GraphQL is read-only; there are no mutations or subscriptions.
 - Free hosting has availability and retention limits. Export demo data before the database's scheduled expiry.

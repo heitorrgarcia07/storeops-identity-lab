@@ -28,7 +28,7 @@ async function refresh() {
             raw.textContent = data.events.length ? data.events.map(event => JSON.stringify(event)).join('\n') : 'No events yet.';
         }
     } catch {
-        status.textContent = 'Server unavailable. Start StoreOps to reconnect.';
+        status.textContent = 'Server unavailable. Start DemoMart to reconnect.';
     } finally {
         setTimeout(refresh, 1000);
     }

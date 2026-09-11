@@ -2,7 +2,7 @@
 
 [Documentation index](README.md)
 
-The read-only metrics API supplies account totals to the StoreOps widget. GraphQL.js validates queries against an explicit schema and returns the fields selected by the client.
+The read-only metrics API supplies account totals to the DemoMart widget. GraphQL.js validates queries against an explicit schema and returns the fields selected by the client.
 
 ## Request contract
 

@@ -1,6 +1,6 @@
-# StoreOps implementation documentation
+# DemoMart implementation documentation
 
-Technical documentation for the StoreOps retail identity and data integration case study. The guides describe the implemented contracts, configuration responsibilities and acceptance criteria for a guided solution review.
+Technical documentation for the DemoMart retail identity and data integration case study. The guides describe the implemented contracts, configuration responsibilities and acceptance criteria for a guided solution review.
 
 ## Solution review
 
