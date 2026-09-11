@@ -15,6 +15,7 @@ Configuration guides and API references for the DemoMart Team Portal.
 | [Identity lifecycle](SCIM-SAML-LINKING.md) | Account ownership, linking rules and access behavior |
 | [Administrative API](ADMIN-LINK-API.md) | Identity-link request, authentication and conflict handling |
 | [GraphQL metrics](GRAPHQL-METRICS.md) | Schema, queries, field selection and errors |
+| [Store sales](SALES.md) | Protected sale creation, store isolation and storage |
 | [Data and deployment](POSTGRESQL.md) | Storage model, environment configuration and persistence |
 
 ## Request conventions

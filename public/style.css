@@ -6,6 +6,16 @@
     --muted:#665875;
     --line:#e8dff0;
 }
+.sales-form { display:grid; gap:12px; max-width:380px; }
+.sales-form label { font-weight:650; }
+.sales-form input:not([type=hidden]) { width:100%; padding:12px; border:1px solid var(--muted); border-radius:8px; font:inherit; }
+.sales-form button { margin-top:12px; }
+.sales-form button:disabled { opacity:.6; cursor:wait; }
+.sales-table { overflow-x:auto; }
+.sales-table table { width:100%; border-collapse:collapse; font-size:14px; }
+.sales-table th,.sales-table td { text-align:left; padding:12px 8px; border-bottom:1px solid var(--line); }
+.sales-table td:nth-child(2) { overflow-wrap:anywhere; min-width:140px; }
+.sales-table td:last-child { white-space:nowrap; }
 .flow-map { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
 .flow-map span { background:#f2ebfa; border-radius:12px; padding:12px 18px; color:var(--purple); font-weight:700; }
 .notice { font-size:14px; color:var(--muted); }

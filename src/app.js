@@ -7,6 +7,7 @@ import { createTrace, record } from './activity.js';
 import { createScimRouter } from './scim.js';
 import { createAdminRouter } from './admin.js';
 import { metricsHandler } from './metrics-graphql.js';
+import { createSalesRouter } from './sales.js';
 const token = () => randomBytes(32).toString('hex');
 const cookie = (req, key) => req.headers.cookie?.split(';').map(s => s.trim()).find(s => s.startsWith(`${key}=`))?.slice(key.length + 1);
 export function createApp(opts) {
@@ -32,6 +33,13 @@ export function createApp(opts) {
     app.use(express.json({ limit: '64kb', type: ['application/json', 'application/graphql+json'] }));
     app.use('/scim/v2', createScimRouter({ users: opts.users, token: opts.scimToken, baseUrl: opts.baseUrl }));
     app.post('/api/graphql', metricsHandler(opts.users));
+    const salesRouter = createSalesRouter({ sales: opts.users.sales, getAccess: async req => {
+        const session = sessions.get(cookie(req, 'storeops_session') || '');
+        const user = session && await opts.users.get(session.userId);
+        return { session, user };
+    } });
+    // Restrict this router's authentication middleware to sales paths.
+    app.use((req, res, next) => ['/sales', '/api/sales'].includes(req.path) ? salesRouter(req, res, next) : next());
     app.get('/activity', (_req, res) => res.send(renderPage('activity', 'Login activity')));
     app.get('/activity/data', (req, res) => {
         const trace = traces.get(cookie(req, 'storeops_activity'));

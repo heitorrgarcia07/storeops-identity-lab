@@ -28,6 +28,7 @@ Built with plain JavaScript, Express, HTML and CSS, with PostgreSQL for hosted s
 | **Identity linking** | Associates an Auth0 identity with an existing SCIM account while preserving its ID and profile. |
 | **Access lifecycle** | Updates store assignments and blocks protected access for inactive accounts. |
 | **Live account metrics** | Serves selected aggregate fields through a read-only GraphQL API. |
+| **Store sales** | Records fictional sales and shows recent transactions for the signed-in employee’s store. [API and scope](docs/SALES.md). |
 | **Activity visibility** | Shows login stages in the browser and API outcomes in structured server logs. |
 
 ## Architecture
@@ -35,6 +36,7 @@ Built with plain JavaScript, Express, HTML and CSS, with PostgreSQL for hosted s
 ```mermaid
 flowchart LR
     B[Browser] -->|Sign-in| A[Auth0]
+    B -->|Store sales · authenticated session| S
     A -->|SAML response via browser| S[DemoMart / Node.js + Express]
     P[Postman] -->|SCIM provisioning| S
     P -->|Administrative identity link| S

@@ -1,0 +1,27 @@
+<small>STORE {{storeId}} · FICTIONAL RETAIL DATA</small>
+<h1>Store sales.</h1>
+<p>Record a sale and review your store’s recent activity.</p>
+<p><a href="/dashboard">← Back to your account</a></p>
+<section>
+    <h2>Record a sale</h2>
+    <p>Your account assigns each sale to store {{storeId}}.</p>
+    <form id="sale-form" class="sales-form">
+        <input type="hidden" id="csrf" value="{{csrf}}">
+        <label for="sale-date">Sale date</label>
+        <input id="sale-date" type="date" required>
+        <label for="sale-amount">Amount (BRL)</label>
+        <input id="sale-amount" type="number" min="0.01" max="9999999.99" step="0.01" placeholder="50.00" required>
+        <button id="save-sale">Save sale</button>
+    </form>
+    <p id="sale-status" role="status" aria-live="polite"></p>
+</section>
+<section>
+    <h2>Recent sales</h2>
+    <p id="sales-summary">Loading sales…</p>
+    <div class="sales-table"><table>
+        <thead><tr><th scope="col">Date</th><th scope="col">Sale ID</th><th scope="col">Amount</th></tr></thead>
+        <tbody id="sales-rows"></tbody>
+    </table></div>
+    <p class="notice">Up to 100 sales, ordered by sale date. Sales are stored in DemoMart; BigQuery synchronization is not enabled.</p>
+</section>
+<script src="/public/sales.js" defer></script>

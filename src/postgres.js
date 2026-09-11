@@ -1,12 +1,14 @@
 import { Pool } from 'pg';
 import { randomUUID } from 'node:crypto';
 import { IdentityError } from './identity.js';
+import { postgresSales } from './sales-store.js';
 
 // Separate PostgreSQL storage for the hosted app. All user values are parameters.
 export class PostgresUsers {
     constructor(pool) {
         this.pool = pool;
         this.kind = 'PostgreSQL';
+        this.sales = postgresSales(pool);
         this.scim = {
             find: async userName => (await pool.query('SELECT user_id FROM scim_resources WHERE lower(user_name)=lower($1)', [userName])).rows[0],
             get: async id => (await pool.query('SELECT resource FROM scim_resources WHERE user_id=$1', [id])).rows[0],
@@ -44,6 +46,7 @@ export class PostgresUsers {
             user_name TEXT NOT NULL, resource TEXT NOT NULL
         )`);
         await this.pool.query('CREATE UNIQUE INDEX IF NOT EXISTS scim_user_name_unique ON scim_resources (lower(user_name))');
+        await this.sales.initialize();
     }
 
     async transaction(work) {

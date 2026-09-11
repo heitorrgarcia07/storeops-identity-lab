@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID } from 'node:crypto';
+import { sqliteSales } from './sales-store.js';
 export class IdentityError extends Error {
 }
 export class Users {
@@ -12,6 +13,7 @@ export class Users {
       active INTEGER NOT NULL DEFAULT 1, UNIQUE(issuer, subject)
     )`);
     }
+    get sales() { return this._sales ??= sqliteSales(this.db); }
     get(id) { return this.db.prepare('SELECT * FROM users WHERE id=?').get(id); }
     metrics() {
         const total = this.db.prepare('SELECT COUNT(*) AS value FROM users').get().value;

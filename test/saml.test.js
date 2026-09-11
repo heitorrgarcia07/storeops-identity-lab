@@ -37,6 +37,13 @@ test('linked SCIM identity signs in without overwriting provisioning data and is
     const dashboard = await request(app).get('/dashboard').set('Cookie', session).expect(200);
     assert.match(dashboard.text, /SCIM account preserved/);
     assert.match(dashboard.text, /Store 101/);
+    const salesPage = await request(app).get('/sales').set('Cookie', session).expect(200);
+    const scriptPath = salesPage.text.match(/<script src="([^"]+)"/)[1];
+    await request(app).get(scriptPath).expect(200).expect('Content-Type', /javascript/);
+    const csrf = salesPage.text.match(/id="csrf" value="([^"]+)"/)[1];
+    await request(app).post('/api/sales').set('Cookie', session).set('X-CSRF-Token', csrf)
+        .send({ sale_id: randomUUID(), sale_date: '2026-09-11', amount_brl: '50.00' }).expect(201);
+    assert.equal((await request(app).get('/api/sales').set('Cookie', session)).body.sales.length, 1);
     assert.equal(users.get(id).email, payload.emails[0].value);
     assert.equal(users.db.prepare('SELECT count(*) AS n FROM users').get().n, 1);
     await request(app).patch(`/scim/v2/Users/${id}`).set('Authorization', `Bearer ${scimToken}`).send({
@@ -44,6 +51,7 @@ test('linked SCIM identity signs in without overwriting provisioning data and is
         Operations: [{ op: 'replace', path: 'active', value: false }]
     }).expect(200);
     await request(app).get('/dashboard').set('Cookie', session).expect(302);
+    await request(app).get('/api/sales').set('Cookie', session).expect(401);
     assert.equal((await authenticate(app)).finish.status, 400);
     assert.equal(users.get(id).active, 0);
     assert.equal(users.db.prepare('SELECT count(*) AS n FROM users').get().n, 1);
