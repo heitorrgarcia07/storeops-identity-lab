@@ -6,6 +6,8 @@ services:
     buildCommand: pnpm install --frozen-lockfile
     startCommand: pnpm start
     envVars:
+      - key: ADMIN_TOKEN
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: APP_BASE_URL

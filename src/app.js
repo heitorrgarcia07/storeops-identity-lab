@@ -5,6 +5,7 @@ import { IdentityError } from './identity.js';
 import { renderPage } from './pages.js';
 import { createTrace, record } from './activity.js';
 import { createScimRouter } from './scim.js';
+import { createAdminRouter } from './admin.js';
 const token = () => randomBytes(32).toString('hex');
 const cookie = (req, key) => req.headers.cookie?.split(';').map(s => s.trim()).find(s => s.startsWith(`${key}=`))?.slice(key.length + 1);
 export function createApp(opts) {
@@ -25,6 +26,7 @@ export function createApp(opts) {
                 sessions.delete(k);
         next();
     });
+    app.use('/api/admin', createAdminRouter({ users: opts.users, token: opts.adminToken, scimToken: opts.scimToken, issuer: opts.issuer }));
     app.use(express.urlencoded({ extended: false, limit: '256kb' }));
     app.use(express.json({ limit: '64kb', type: ['application/json', 'application/graphql+json'] }));
     app.use('/scim/v2', createScimRouter({ users: opts.users, token: opts.scimToken, baseUrl: opts.baseUrl }));

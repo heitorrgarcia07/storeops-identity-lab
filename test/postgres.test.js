@@ -33,7 +33,8 @@ test('PostgreSQL: SCIM, JIT, identity link, deactivation, rollback and restart p
     const path = mkdtempSync(join(tmpdir(), 'storeops-postgres-test-'));
     let users = await database(path);
     t.after(async () => { await users.close(); rmSync(path, { recursive: true, force: true }); });
-    const app = createApp({ users, scimToken: token, issuer, jit: true, baseUrl: 'http://localhost:3000', entityId: 'urn:test:sp' });
+    const adminToken = 'admin-postgres-test-abcdefghijklmnopqrstuvwxyz';
+    const app = createApp({ users, adminToken, scimToken: token, issuer, jit: true, baseUrl: 'http://localhost:3000', entityId: 'urn:test:sp' });
     const post = body => request(app).post('/scim/v2/Users').set('Authorization', `Bearer ${token}`).send(body);
     const patch = (id, operations) => request(app).patch(`/scim/v2/Users/${id}`).set('Authorization', `Bearer ${token}`).send(envelope(operations));
     const metrics = () => request(app).post('/api/graphql').send({ query: '{ metrics { totalUsers activeUsers } }' });
@@ -53,7 +54,12 @@ test('PostgreSQL: SCIM, JIT, identity link, deactivation, rollback and restart p
     assert.equal(repeat.created, false);
     await assert.rejects(users.login(profile('auth0|new'), issuer, false), /JIT disabled/);
     await assert.rejects(users.login({ ...profile('auth0|new'), storeId: '999' }, issuer, true), /Store not authorized/);
-    await users.linkIdentity(created.id, issuer, 'auth0|scim');
+    const linkBody = { userId: created.id, subject: 'auth0|scim' };
+    await request(app).post('/api/admin/identity-links').set('Authorization', `Bearer ${token}`).send(linkBody).expect(401);
+    for (let attempt = 0; attempt < 2; attempt++) {
+        await request(app).post('/api/admin/identity-links').set('Authorization', `Bearer ${adminToken}`).send(linkBody).expect(200);
+    }
+    await request(app).post('/api/admin/identity-links').set('Authorization', `Bearer ${adminToken}`).send({ ...linkBody, subject: 'auth0|jit' }).expect(409);
     const signedIn = await users.login(profile('auth0|scim'), issuer, true);
     assert.equal(signedIn.managedBy, 'SCIM');
     assert.equal(signedIn.user.id, created.id);

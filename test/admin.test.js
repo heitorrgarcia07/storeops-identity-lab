@@ -1,0 +1,38 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import request from 'supertest';
+import { Users } from '../src/identity.js';
+import { createApp } from '../src/app.js';
+
+const adminToken = 'admin-test-only-abcdefghijklmnopqrstuvwxyz';
+const scimToken = 'scim-test-only-abcdefghijklmnopqrstuvwxyz';
+const issuer = 'urn:test:idp';
+const ana = JSON.parse(readFileSync(new URL('../config/ana-scim.json', import.meta.url), 'utf8'));
+test('admin API requires separate credentials, preserves data and rejects conflicts', async t => {
+    const users = new Users(':memory:');
+    t.after(() => users.db.close());
+    const opts = { users, adminToken, scimToken, issuer, baseUrl: 'http://localhost:3000' };
+    const app = createApp(opts);
+    const create = data => request(app).post('/scim/v2/Users').set('Authorization', `Bearer ${scimToken}`).send(data);
+    const first = (await create(ana).expect(201)).body;
+    const second = (await create({ ...ana, userName: 'second@example.com' }).expect(201)).body;
+    const body = { userId: first.id, subject: 'auth0|test-one' };
+    const link = (data, key = adminToken, target = app) => request(target).post('/api/admin/identity-links').set('Authorization', `Bearer ${key}`).send(data);
+    await request(app).post('/api/admin/identity-links').send(body).expect(401);
+    await link(body, scimToken).expect(401);
+    await link(body, adminToken, createApp({ ...opts, adminToken: undefined })).expect(503);
+    await link(body, scimToken, createApp({ ...opts, adminToken: scimToken })).expect(503);
+    await link({ ...body, issuer: 'urn:attacker' }).expect(400);
+    await link({ ...body, subject: '' }).expect(400);
+    await link({ ...body, userId: '00000000-0000-4000-8000-000000000000' }).expect(404);
+    const before = { ...users.get(first.id) };
+    await link(body).expect(200);
+    await link(body).expect(200);
+    assert.deepEqual({ ...users.get(first.id) }, { ...before, issuer, subject: body.subject });
+    await link({ ...body, userId: second.id }).expect(409);
+    await link({ ...body, subject: 'auth0|different' }).expect(409);
+    const jit = users.login({ issuer, nameID: 'auth0|jit', email: 'jit@example.com', displayName: 'JIT', storeId: '101' }, issuer, true);
+    await link({ ...body, userId: jit.user.id }).expect(409);
+    assert.equal(users.get(second.id).issuer, 'urn:storeops:unlinked-scim');
+});

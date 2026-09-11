@@ -49,6 +49,8 @@ Automated tests use locally generated signed SAML fixtures. They do not prove th
 
 ## Files to study
 
+The custom administrative identity-link API is documented in [ADMIN-LINK-API.md](docs/ADMIN-LINK-API.md). It requires a separate `ADMIN_TOKEN` and preserves the same conflict checks as manual linking. The metrics endpoint is a GraphQL-style prototype, not a schema-backed GraphQL server.
+
 - `src/config.js`: SAML trust configuration.
 - `views/`: HTML pages. `public/style.css`: colors and layout.
 - `src/pages.js`: fills HTML placeholders safely.
