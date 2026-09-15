@@ -18,7 +18,7 @@ export function createApp(opts) {
     app.disable('x-powered-by');
     app.use('/public', express.static(new URL('../public', import.meta.url).pathname));
     app.use((req, res, next) => {
-        res.set({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'" });
+        res.set({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'" });
         for (const [key, trace] of traces) if (trace.expires < Date.now()) traces.delete(key);
         for (const [k, v] of flows)
             if (v.expires < Date.now())
