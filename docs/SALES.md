@@ -33,6 +33,6 @@ Every request checks current account activity and store assignment. SCIM deactiv
 
 All fictional sales use USD. On startup, PostgreSQL automatically renames the legacy `amount_brl` column to `amount_usd`, preserving sale IDs and numeric values. This relabels demo data; it does not convert exchange rates. API callers must now send `amount_usd`. SQLite retains its currency-neutral integer cents column.
 
-Sales are immutable in this version: no edits, refunds or deletion. The page total covers only the displayed rows. GraphQL metrics still describe accounts, not sales. BigQuery synchronization is not implemented; CSV exercises remain separate from application data.
+Sales are immutable in this version: no edits, refunds or deletion. The page total covers only the displayed rows. GraphQL metrics still describe accounts, not sales. An optional [local BigQuery runner](BIGQUERY-SYNC.md) refreshes sales snapshots on demand; there is no scheduled synchronization.
 
 [Back to documentation](README.md)

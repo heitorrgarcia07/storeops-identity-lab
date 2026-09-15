@@ -16,6 +16,8 @@ Configuration guides and API references for the DemoMart Team Portal.
 | [Administrative API](ADMIN-LINK-API.md) | Identity-link request, authentication and conflict handling |
 | [GraphQL metrics](GRAPHQL-METRICS.md) | Schema, queries, field selection and errors |
 | [Store sales](SALES.md) | Protected sale creation, store isolation and storage |
+| [BigQuery snapshots](BIGQUERY-SYNC.md) | On-demand sales loading and reconciliation |
+| [Synthetic sales](SYNTHETIC-SALES.md) | Repeatable fictional data for analytics demonstrations |
 | [Data and deployment](POSTGRESQL.md) | Storage model, environment configuration and persistence |
 
 ## Request conventions
